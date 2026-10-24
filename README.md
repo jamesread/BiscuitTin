@@ -7,6 +7,7 @@
   [raylib-go](https://github.com/gen2brain/raylib-go); configured with YAML.
 
 [![Maturity Badge](https://img.shields.io/badge/maturity-Sandbox-yellow)](#none)
+[![AI Autonomy Level](https://img.shields.io/badge/AI%20Autonomy-Level%204%20of%205%20(fully--autonomous--engineer)-blue)](https://blog.jread.com/posts/ai-levels-of-autonomy-in-software-engineering/)
 [![Discord](https://img.shields.io/discord/846737624960860180?label=Discord%20Server)](https://discord.gg/jhYWWpNJ3v)
 [![Build](https://github.com/jamesread/biscuittin/actions/workflows/build.yml/badge.svg)](https://github.com/jamesread/biscuittin/actions/workflows/build.yml)
 

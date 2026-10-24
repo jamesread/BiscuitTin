@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1280" height="640" viewBox="0 0 1280 640">
+  <title>BiscuitTin</title>
+  <rect width="1280" height="640" fill="#14161f"/>
+  <image href="../logo.svg" x="72" y="80" width="480" height="480"/>
+  <text xml:space="preserve" x="596" y="292" font-family="Noto Sans" font-weight="700" font-size="88" fill="#ffffff">BiscuitTin</text>
+  <rect x="596" y="316" width="200" height="10" rx="5" fill="#facf00"/>
+  <text x="596" y="378" font-family="Noto Sans" font-weight="400" font-size="30" fill="#c9e4ff">A&#160;full-screen&#160;app&#160;launcher&#160;for&#160;TV&#160;boxes</text>
+</svg>

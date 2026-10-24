@@ -20,7 +20,7 @@ func writeTestPNG(t *testing.T, path string) {
 		t.Fatal(err)
 	}
 	if err := png.Encode(f, img); err != nil {
-		f.Close()
+		_ = f.Close()
 		t.Fatal(err)
 	}
 	if err := f.Close(); err != nil {
@@ -33,7 +33,7 @@ func TestSaveRecentKeepsFiveNewest(t *testing.T) {
 	src := filepath.Join(t.TempDir(), "src.png")
 	writeTestPNG(t, src)
 
-	for i := 0; i < 7; i++ {
+	for i := range 7 {
 		if err := saveRecent(dir, src, fmt.Sprintf("credit-%d", i)); err != nil {
 			t.Fatal(err)
 		}
@@ -65,7 +65,7 @@ func TestLoadRecentReturnsNewestAndPrunes(t *testing.T) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	for i := 0; i < 7; i++ {
+	for i := range 7 {
 		p := filepath.Join(dir, fmt.Sprintf("%d.png", i))
 		writeTestPNG(t, p)
 		if err := os.WriteFile(p+".credit", []byte(fmt.Sprintf("pic-%d\n", i)), 0o644); err != nil {
@@ -187,7 +187,7 @@ func TestNewFetcherPrunesRecentOnStart(t *testing.T) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	for i := 0; i < 7; i++ {
+	for i := range 7 {
 		p := filepath.Join(dir, fmt.Sprintf("%d.png", i))
 		writeTestPNG(t, p)
 		if err := os.Chtimes(p, time.Unix(int64(i), 0), time.Unix(int64(i), 0)); err != nil {

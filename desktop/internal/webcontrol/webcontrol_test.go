@@ -88,11 +88,15 @@ func TestRemoteQueueIsBounded(t *testing.T) {
 
 func TestRemoteServesPage(t *testing.T) {
 	_, _, srv := newTestRemote(t)
-	resp, err := http.Get(srv.URL + "/")
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL+"/", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 	// Built frontend: the page. Without `make`: a clear hint, not a crash.
 	if !strings.Contains(string(body), "BiscuitTin remote") && !strings.Contains(string(body), "run `make`") {

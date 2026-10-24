@@ -2,6 +2,7 @@ package integrations
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,10 +26,10 @@ func defaultHATokenFile() string {
 }
 
 type homeAssistantSource struct {
+	http      *http.Client
 	base      string
 	token     string
 	tokenFile string
-	http      *http.Client
 }
 
 func newHomeAssistantSource(c config.HomeAssistantConfig) *homeAssistantSource {
@@ -65,45 +66,73 @@ func (s *homeAssistantSource) bearer() (string, error) {
 	return strings.TrimSpace(string(raw)), nil
 }
 
+type haResp struct {
+	status string
+	raw    []byte
+	code   int
+}
+
+func jsonReader(body any) (io.Reader, error) {
+	if body == nil {
+		return nil, nil
+	}
+	raw, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	return bytes.NewReader(raw), nil
+}
+
+func readHTTP(client *http.Client, req *http.Request) (haResp, error) {
+	resp, err := client.Do(req)
+	if err != nil {
+		return haResp{}, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, 32<<20))
+	if err != nil {
+		return haResp{}, err
+	}
+	return haResp{raw: raw, status: resp.Status, code: resp.StatusCode}, nil
+}
+
+func (s *homeAssistantSource) haRequest(method, path, token string, body any) (haResp, error) {
+	rd, err := jsonReader(body)
+	if err != nil {
+		return haResp{}, err
+	}
+	req, err := http.NewRequestWithContext(context.Background(), method, s.base+path, rd)
+	if err != nil {
+		return haResp{}, err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	return readHTTP(s.http, req)
+}
+
+func decodeHA(method, path string, res haResp, out any) error {
+	if res.code == http.StatusUnauthorized {
+		return fmt.Errorf("access token rejected (401)")
+	}
+	if res.code != http.StatusOK {
+		return fmt.Errorf("%s %s: %s", method, path, res.status)
+	}
+	if out == nil {
+		return nil
+	}
+	return json.Unmarshal(res.raw, out)
+}
+
 func (s *homeAssistantSource) do(method, path string, body any, out any) error {
 	token, err := s.bearer()
 	if err != nil {
 		return err
 	}
-	var rd io.Reader
-	if body != nil {
-		raw, err := json.Marshal(body)
-		if err != nil {
-			return err
-		}
-		rd = bytes.NewReader(raw)
-	}
-	req, err := http.NewRequest(method, s.base+path, rd)
+	res, err := s.haRequest(method, path, token, body)
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := s.http.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, 32<<20))
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode == http.StatusUnauthorized {
-		return fmt.Errorf("access token rejected (401)")
-	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%s %s: %s", method, path, resp.Status)
-	}
-	if out == nil {
-		return nil
-	}
-	return json.Unmarshal(raw, out)
+	return decodeHA(method, path, res, out)
 }
 
 type haState struct {
@@ -116,37 +145,56 @@ type haState struct {
 }
 
 // List returns every automation, sorted by name.
+func haTitle(st haState) string {
+	if st.Attributes.FriendlyName != "" {
+		return st.Attributes.FriendlyName
+	}
+	return st.EntityID
+}
+
+func haIcon(icon string) string {
+	if name := iconifyName(icon); name != "" { // HA icons are "mdi:name", also on Iconify
+		return name
+	}
+	return "mdi:robot"
+}
+
+func haGroup(state string) string {
+	if state == "off" {
+		return "Automation  /  disabled"
+	}
+	return "Automation"
+}
+
+func listedAutomation(source string, st haState) (ListedAction, bool) {
+	if !strings.HasPrefix(st.EntityID, "automation.") {
+		return ListedAction{}, false
+	}
+	return ListedAction{PinnedAction: PinnedAction{
+		Source:    source,
+		BindingID: st.EntityID,
+		Title:     haTitle(st),
+		Group:     haGroup(st.State),
+		Icon:      haIcon(st.Attributes.Icon),
+	}}, true
+}
+
+func automationsFrom(source string, states []haState) []ListedAction {
+	var out []ListedAction
+	for _, st := range states {
+		if a, ok := listedAutomation(source, st); ok {
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
 func (s *homeAssistantSource) List() ([]ListedAction, error) {
 	var states []haState
 	if err := s.do(http.MethodGet, "/api/states", nil, &states); err != nil {
 		return nil, err
 	}
-
-	var out []ListedAction
-	for _, st := range states {
-		if !strings.HasPrefix(st.EntityID, "automation.") {
-			continue
-		}
-		title := st.Attributes.FriendlyName
-		if title == "" {
-			title = st.EntityID
-		}
-		icon := iconifyName(st.Attributes.Icon) // HA icons are "mdi:name", also on Iconify
-		if icon == "" {
-			icon = "mdi:robot"
-		}
-		group := "Automation"
-		if st.State == "off" {
-			group = "Automation  /  disabled"
-		}
-		out = append(out, ListedAction{PinnedAction: PinnedAction{
-			Source:    s.ID(),
-			BindingID: st.EntityID,
-			Title:     title,
-			Group:     group,
-			Icon:      icon,
-		}})
-	}
+	out := automationsFrom(s.ID(), states)
 	sort.Slice(out, func(i, j int) bool { return strings.ToLower(out[i].Title) < strings.ToLower(out[j].Title) })
 	return out, nil
 }

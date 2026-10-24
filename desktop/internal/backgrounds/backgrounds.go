@@ -3,6 +3,7 @@
 package backgrounds
 
 import (
+	"context"
 	"fmt"
 	"image"
 	"image/draw"
@@ -65,20 +66,20 @@ func newBgClient() *http.Client {
 
 // Image is a decoded background, ready to upload as a texture.
 type Image struct {
+	Err    error
 	Pix    *image.RGBA
 	Grid   *contrast.LumGrid
 	Credit string
-	Err    error
 }
 
 // Fetcher runs providers on a background goroutine so downloads and JPEG
 // decoding never stall rendering. Each request yields one result on out.
 type Fetcher struct {
-	providers []bgProvider
 	requests  chan Size
 	Out       chan Image
-	next      int
 	recentDir string
+	providers []bgProvider
+	next      int
 }
 
 func NewFetcher(cfg *config.Config) *Fetcher {
@@ -116,39 +117,50 @@ func (f *Fetcher) run() {
 
 // fetch tries each provider in turn, rotating the starting provider so
 // consecutive images alternate between sources.
+func (f *Fetcher) decodeFetched(i int, path, credit string) (Image, error, bool) {
+	pix, err := decodeRGBA(path)
+	if err != nil {
+		lg().Warn("decode failed, removing", zap.String("path", path), zap.Error(err))
+		_ = os.Remove(path)
+		return Image{}, err, false
+	}
+	f.next = (f.next + i + 1) % len(f.providers)
+	if err := saveRecent(f.recentDir, path, credit); err != nil {
+		lg().Warn("could not cache recent background", zap.Error(err))
+	}
+	return Image{Pix: pix, Grid: contrast.BuildLumGrid(pix), Credit: credit}, nil, true
+}
+
+func (f *Fetcher) tryProvider(i int, size Size) (Image, error, bool) {
+	p := f.providers[(f.next+i)%len(f.providers)]
+	path, credit, err := p.Next(size)
+	if err != nil {
+		lg().Warn("fetch failed, trying the cache", zap.String("provider", p.Name()), zap.Error(err))
+		path, credit, err = randomCached(p.Dir(), p.Name())
+		if err != nil {
+			return Image{}, err, false
+		}
+	}
+	return f.decodeFetched(i, path, credit)
+}
+
+func (f *Fetcher) fetchFromProviders(size Size) Image {
+	var lastErr error
+	for i := range f.providers {
+		img, err, ok := f.tryProvider(i, size)
+		if ok {
+			return img
+		}
+		lastErr = err
+	}
+	return Image{Err: lastErr}
+}
+
 func (f *Fetcher) fetch(size Size) Image {
 	if len(f.providers) == 0 {
 		return Image{Err: fmt.Errorf("no background providers configured")}
 	}
-
-	var lastErr error
-	for i := 0; i < len(f.providers); i++ {
-		p := f.providers[(f.next+i)%len(f.providers)]
-		path, credit, err := p.Next(size)
-		if err != nil {
-			lg().Warn("fetch failed, trying the cache", zap.String("provider", p.Name()), zap.Error(err))
-			path, credit, err = randomCached(p.Dir(), p.Name())
-			if err != nil {
-				lastErr = err
-				continue
-			}
-		}
-
-		pix, err := decodeRGBA(path)
-		if err != nil {
-			lg().Warn("decode failed, removing", zap.String("path", path), zap.Error(err))
-			_ = os.Remove(path)
-			lastErr = err
-			continue
-		}
-
-		f.next = (f.next + i + 1) % len(f.providers)
-		if err := saveRecent(f.recentDir, path, credit); err != nil {
-			lg().Warn("could not cache recent background", zap.Error(err))
-		}
-		return Image{Pix: pix, Grid: contrast.BuildLumGrid(pix), Credit: credit}
-	}
-	return Image{Err: lastErr}
+	return f.fetchFromProviders(size)
 }
 
 func decodeRGBA(path string) (*image.RGBA, error) {
@@ -156,7 +168,7 @@ func decodeRGBA(path string) (*image.RGBA, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer fh.Close()
+	defer func() { _ = fh.Close() }()
 
 	src, _, err := image.Decode(fh)
 	if err != nil {
@@ -198,14 +210,7 @@ func readCredit(imagePath string) string {
 
 // download saves url to path (with its credit alongside) unless already
 // cached, then prunes the directory to the newest bgKeepPerSource images.
-func download(client *http.Client, url, path, credit string) error {
-	if _, err := os.Stat(path); err == nil {
-		return nil
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-
+func writeDownload(client *http.Client, url, path, credit string) error {
 	raw, err := httpGet(client, url, bgMaxDownload)
 	if err != nil {
 		return err
@@ -216,13 +221,22 @@ func download(client *http.Client, url, path, credit string) error {
 	if err := fsutil.WriteFileAtomic(path, raw); err != nil {
 		return err
 	}
-
 	pruneCache(filepath.Dir(path), bgKeepPerSource)
 	return nil
 }
 
+func download(client *http.Client, url, path, credit string) error {
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+		return err
+	}
+	return writeDownload(client, url, path, credit)
+}
+
 func httpGet(client *http.Client, url string, limit int64) ([]byte, error) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +245,7 @@ func httpGet(client *http.Client, url string, limit int64) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("GET %s: %s", url, resp.Status)
 	}

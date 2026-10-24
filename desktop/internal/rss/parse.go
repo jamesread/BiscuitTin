@@ -24,11 +24,11 @@ var (
 )
 
 type Item struct {
+	Published time.Time `json:"published"`
 	Feed      string    `json:"feed"`
 	Title     string    `json:"title"`
 	Summary   string    `json:"summary"`
 	Link      string    `json:"link"`
-	Published time.Time `json:"published"`
 }
 
 type rssDoc struct {
@@ -72,26 +72,38 @@ func parseFeed(raw []byte, fallbackName string) (string, []Item, error) {
 	return parseFeedTyped(raw, "", fallbackName)
 }
 
-func parseFeedTyped(raw []byte, contentType, fallbackName string) (string, []Item, error) {
-	raw = decodeToUTF8(raw, contentType)
-	raw = xmlEncodingDecl.ReplaceAll(raw, []byte(`encoding="UTF-8"`))
-	if looksLikeAtom(raw) {
-		name, items, err := parseAtom(raw, fallbackName)
-		if err == nil && len(items) > 0 {
-			return name, items, nil
-		}
+func tryParse(fn func([]byte, string) (string, []Item, error), raw []byte, fallback string) (string, []Item, bool) {
+	name, items, err := fn(raw, fallback)
+	if err != nil {
+		return "", nil, false
 	}
+	if len(items) == 0 {
+		return "", nil, false
+	}
+	return name, items, true
+}
+
+func parseRSSOrAtom(raw []byte, fallbackName string) (string, []Item, error) {
 	name, items, err := parseRSS(raw, fallbackName)
 	if err == nil && len(items) > 0 {
 		return name, items, nil
 	}
-	if name, items, aerr := parseAtom(raw, fallbackName); aerr == nil && len(items) > 0 {
-		return name, items, nil
+	atomName, atomItems, ok := tryParse(parseAtom, raw, fallbackName)
+	if ok {
+		return atomName, atomItems, nil
 	}
-	if err != nil {
-		return "", nil, err
+	return name, items, err
+}
+
+func parseFeedTyped(raw []byte, contentType, fallbackName string) (string, []Item, error) {
+	raw = decodeToUTF8(raw, contentType)
+	raw = xmlEncodingDecl.ReplaceAll(raw, []byte(`encoding="UTF-8"`))
+	if looksLikeAtom(raw) {
+		if name, items, ok := tryParse(parseAtom, raw, fallbackName); ok {
+			return name, items, nil
+		}
 	}
-	return name, items, nil
+	return parseRSSOrAtom(raw, fallbackName)
 }
 
 func looksLikeAtom(raw []byte) bool {
@@ -152,17 +164,31 @@ func newItem(feed, title, summary, content, link, published string) (Item, bool)
 	}, true
 }
 
+func isAlternate(rel string) bool {
+	if rel == "" {
+		return true
+	}
+	return rel == "alternate"
+}
+
+func pickAtomHref(l atomLink, alt *string) (string, bool) {
+	if l.Href == "" {
+		return "", false
+	}
+	if isAlternate(l.Rel) {
+		return l.Href, true
+	}
+	if *alt == "" {
+		*alt = l.Href
+	}
+	return "", false
+}
+
 func atomHref(links []atomLink) string {
 	alt := ""
 	for _, l := range links {
-		if l.Href == "" {
-			continue
-		}
-		if l.Rel == "" || l.Rel == "alternate" {
-			return l.Href
-		}
-		if alt == "" {
-			alt = l.Href
+		if href, keep := pickAtomHref(l, &alt); keep {
+			return href
 		}
 	}
 	return alt
@@ -183,7 +209,7 @@ func plainText(s string) string {
 }
 
 func unescapeEntities(s string) string {
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		next := html.UnescapeString(s)
 		if next == s {
 			break
@@ -201,21 +227,24 @@ var cp1252 = [32]rune{
 	0, '‘', '’', '“', '”', '•', '–', '—', '˜', '™', 'š', '›', 'œ', 0, 'ž', 'Ÿ',
 }
 
+func mapPunctRune(r rune) (rune, bool) {
+	if r == unicode.ReplacementChar {
+		return 0, false
+	}
+	if r < 0x80 || r > 0x9f {
+		return r, true
+	}
+	m := cp1252[r-0x80]
+	return m, m != 0
+}
+
 func mapLegacyPunct(s string) string {
 	var b strings.Builder
 	b.Grow(len(s))
 	for _, r := range s {
-		if r >= 0x80 && r <= 0x9f {
-			if m := cp1252[r-0x80]; m != 0 {
-				r = m
-			} else {
-				continue
-			}
+		if mapped, ok := mapPunctRune(r); ok {
+			b.WriteRune(mapped)
 		}
-		if r == unicode.ReplacementChar {
-			continue
-		}
-		b.WriteRune(r)
 	}
 	return b.String()
 }
@@ -317,6 +346,32 @@ func parsePublished(s string) time.Time {
 }
 
 // AgeLabel is a short relative time for a living-room display.
+func recentAge(d time.Duration) (string, bool) {
+	if d < time.Minute {
+		return "Just now", true
+	}
+	if d < time.Hour {
+		return countLabel(int(d/time.Minute), "minute") + " ago", true
+	}
+	if d < 24*time.Hour {
+		return countLabel(int(d/time.Hour), "hour") + " ago", true
+	}
+	return "", false
+}
+
+func olderAge(published, now time.Time, d time.Duration) string {
+	if d < 48*time.Hour {
+		return "Yesterday"
+	}
+	if d < 7*24*time.Hour {
+		return countLabel(int(d/(24*time.Hour)), "day") + " ago"
+	}
+	if published.Year() == now.Year() {
+		return published.Format("2 Jan")
+	}
+	return published.Format("2 Jan 2006")
+}
+
 func AgeLabel(published, now time.Time) string {
 	if published.IsZero() {
 		return ""
@@ -325,25 +380,10 @@ func AgeLabel(published, now time.Time) string {
 		published = now
 	}
 	d := now.Sub(published)
-	switch {
-	case d < time.Minute:
-		return "Just now"
-	case d < time.Hour:
-		n := int(d / time.Minute)
-		return countLabel(n, "minute") + " ago"
-	case d < 24*time.Hour:
-		n := int(d / time.Hour)
-		return countLabel(n, "hour") + " ago"
-	case d < 48*time.Hour:
-		return "Yesterday"
-	case d < 7*24*time.Hour:
-		n := int(d / (24 * time.Hour))
-		return countLabel(n, "day") + " ago"
-	case published.Year() == now.Year():
-		return published.Format("2 Jan")
-	default:
-		return published.Format("2 Jan 2006")
+	if label, ok := recentAge(d); ok {
+		return label
 	}
+	return olderAge(published, now, d)
 }
 
 func countLabel(n int, unit string) string {

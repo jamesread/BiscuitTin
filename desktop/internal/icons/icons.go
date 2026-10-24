@@ -63,9 +63,7 @@ type Result struct {
 // becomes available. It runs in the background so startup never waits on the
 // network; textures are loaded by the main (GL) thread when the results
 // arrive.
-func Resolve(cfg *config.Config, key func(entry int) string, results chan<- Result) {
-	cacheDir := filepath.Join(cfg.CacheDir, "icons")
-
+func iconProviders(cfg *config.Config) []iconProvider {
 	var providers []iconProvider
 	for _, name := range cfg.IconProviders {
 		p, err := newIconProvider(name, cfg.CacheDir)
@@ -75,31 +73,50 @@ func Resolve(cfg *config.Config, key func(entry int) string, results chan<- Resu
 		}
 		providers = append(providers, p)
 	}
+	return providers
+}
 
+func iconQuery(e config.Entry) (query, style string) {
+	query = e.IconQuery
+	if query == "" {
+		query = e.Title
+	}
+	style = e.IconStyle
+	if style == "" {
+		style = "mono"
+	}
+	return query, style
+}
+
+func tryCachedIcon(p iconProvider, cacheDir, query, style, key string, results chan<- Result) bool {
+	path, err := cachedIcon(p, cacheDir, query, style)
+	if err == nil {
+		results <- Result{Key: key, Path: path}
+		return true
+	}
+	if !errors.Is(err, errIconNotFound) {
+		lg().Warn("icon lookup failed", zap.String("provider", p.Name()), zap.String("query", query), zap.Error(err))
+	}
+	return false
+}
+
+func resolveEntry(providers []iconProvider, cacheDir string, i int, e config.Entry, key func(int) string, results chan<- Result) {
+	if e.Icon != "" {
+		return
+	}
+	query, style := iconQuery(e)
+	for _, p := range providers {
+		if tryCachedIcon(p, cacheDir, query, style, key(i), results) {
+			return
+		}
+	}
+}
+
+func Resolve(cfg *config.Config, key func(entry int) string, results chan<- Result) {
+	providers := iconProviders(cfg)
+	cacheDir := filepath.Join(cfg.CacheDir, "icons")
 	for i, e := range cfg.Entries {
-		if e.Icon != "" {
-			continue
-		}
-
-		query := e.IconQuery
-		if query == "" {
-			query = e.Title
-		}
-		style := e.IconStyle
-		if style == "" {
-			style = "mono"
-		}
-
-		for _, p := range providers {
-			path, err := cachedIcon(p, cacheDir, query, style)
-			if err == nil {
-				results <- Result{Key: key(i), Path: path}
-				break
-			}
-			if !errors.Is(err, errIconNotFound) {
-				lg().Warn("icon lookup failed", zap.String("provider", p.Name()), zap.String("query", query), zap.Error(err))
-			}
-		}
+		resolveEntry(providers, cacheDir, i, e, key, results)
 	}
 }
 
@@ -118,29 +135,61 @@ func ResolveIconify(cfg *config.Config, key, name string, results chan<- Result)
 
 // cachedIcon returns a rendered PNG for query from provider p, rendering and
 // caching it on first use.
-func cachedIcon(p iconProvider, cacheDir, query, style string) (string, error) {
+type iconCache struct {
+	dir  string
+	png  string
+	miss string
+}
+
+func iconCachePaths(p iconProvider, cacheDir, query, style string) iconCache {
 	dir := filepath.Join(cacheDir, p.Name())
 	base := fmt.Sprintf("%s-%s-r%d", normalizeQuery(query), style, iconRenderVersion)
-	pngPath := filepath.Join(dir, base+".png")
-	missPath := filepath.Join(dir, base+".miss")
+	return iconCache{dir: dir, png: filepath.Join(dir, base+".png"), miss: filepath.Join(dir, base+".miss")}
+}
 
-	if _, err := os.Stat(pngPath); err == nil {
-		return pngPath, nil
-	}
-	if st, err := os.Stat(missPath); err == nil && time.Since(st.ModTime()) < iconMissTTL {
-		return "", errIconNotFound
-	}
-
-	svg, err := p.Find(query, style)
+func freshMiss(missPath string) bool {
+	st, err := os.Stat(missPath)
 	if err != nil {
-		if errors.Is(err, errIconNotFound) {
-			_ = os.MkdirAll(dir, 0o755)
-			_ = os.WriteFile(missPath, nil, 0o644)
-			lg().Info("no icon found", zap.String("provider", p.Name()), zap.String("query", query))
-		}
-		return "", err
+		return false
 	}
+	return time.Since(st.ModTime()) < iconMissTTL
+}
 
+func iconCacheHit(paths iconCache) (bool, error) {
+	if _, err := os.Stat(paths.png); err == nil {
+		return true, nil
+	}
+	if freshMiss(paths.miss) {
+		return true, errIconNotFound
+	}
+	return false, nil
+}
+
+func fetchIconSVG(p iconProvider, paths iconCache, query, style string) ([]byte, error) {
+	svg, err := p.Find(query, style)
+	if err == nil {
+		return svg, nil
+	}
+	if errors.Is(err, errIconNotFound) {
+		_ = os.MkdirAll(paths.dir, 0o750)
+		_ = os.WriteFile(paths.miss, nil, 0o600)
+		lg().Info("no icon found", zap.String("provider", p.Name()), zap.String("query", query))
+	}
+	return nil, err
+}
+
+func writePNGFile(pngPath, dir string, img *image.RGBA) error {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		return err
+	}
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		return err
+	}
+	return fsutil.WriteFileAtomic(pngPath, buf.Bytes())
+}
+
+func writeCachedPNG(p iconProvider, paths iconCache, query, style string, svg []byte) (string, error) {
 	img, err := RasterizeSVG(svg, iconRasterSize)
 	if err != nil {
 		return "", fmt.Errorf("render: %w", err)
@@ -148,35 +197,41 @@ func cachedIcon(p iconProvider, cacheDir, query, style string) (string, error) {
 	if style == "mono" {
 		TintWhite(img)
 	}
+	if err := writePNGFile(paths.png, paths.dir, img); err != nil {
+		return "", err
+	}
+	_ = os.Remove(paths.miss)
+	lg().Info("icon cached", zap.String("provider", p.Name()), zap.String("query", query), zap.String("path", paths.png))
+	return paths.png, nil
+}
 
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+func cachedIcon(p iconProvider, cacheDir, query, style string) (string, error) {
+	paths := iconCachePaths(p, cacheDir, query, style)
+	if cached, err := iconCacheHit(paths); cached {
+		return paths.png, err
+	}
+	svg, err := fetchIconSVG(p, paths, query, style)
+	if err != nil {
 		return "", err
 	}
-	var buf bytes.Buffer
-	if err := png.Encode(&buf, img); err != nil {
-		return "", err
-	}
-	if err := fsutil.WriteFileAtomic(pngPath, buf.Bytes()); err != nil {
-		return "", err
-	}
-	_ = os.Remove(missPath)
-
-	lg().Info("icon cached", zap.String("provider", p.Name()), zap.String("query", query), zap.String("path", pngPath))
-	return pngPath, nil
+	return writeCachedPNG(p, paths, query, style, svg)
 }
 
 // RasterizeSVG renders an SVG into a size x size image, preserving the aspect
 // ratio of its viewBox and centring it.
+func svgViewSize(vw, vh float64) (float64, float64) {
+	if vw > 0 && vh > 0 {
+		return vw, vh
+	}
+	return 1, 1
+}
+
 func RasterizeSVG(svg []byte, size int) (*image.RGBA, error) {
 	icon, err := oksvg.ReadIconStream(bytes.NewReader(stripRootSize(svg)), oksvg.IgnoreErrorMode)
 	if err != nil {
 		return nil, err
 	}
-
-	vw, vh := icon.ViewBox.W, icon.ViewBox.H
-	if vw <= 0 || vh <= 0 {
-		vw, vh = 1, 1
-	}
+	vw, vh := svgViewSize(icon.ViewBox.W, icon.ViewBox.H)
 	k := float64(size) / math.Max(vw, vh)
 	w, h := vw*k, vh*k
 	icon.SetTarget((float64(size)-w)/2, (float64(size)-h)/2, w, h)
@@ -185,7 +240,6 @@ func RasterizeSVG(svg []byte, size int) (*image.RGBA, error) {
 	for i := range icon.SVGPaths {
 		icon.SVGPaths[i].LineWidth *= k
 	}
-
 	img := image.NewRGBA(image.Rect(0, 0, size, size))
 	scanner := rasterx.NewScannerGV(size, size, img, img.Bounds())
 	icon.Draw(rasterx.NewDasher(size, size, scanner), 1)
@@ -223,10 +277,17 @@ func TintWhite(img *image.RGBA) {
 	}
 }
 
+func keepQueryRune(r rune) bool {
+	if r >= 'a' && r <= 'z' {
+		return true
+	}
+	return r >= '0' && r <= '9'
+}
+
 func normalizeQuery(s string) string {
 	var b strings.Builder
 	for _, r := range strings.ToLower(s) {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+		if keepQueryRune(r) {
 			b.WriteRune(r)
 		}
 	}

@@ -35,8 +35,8 @@ func SocketPath() string {
 
 // Bridge holds the latest diagnostics snapshot, published from the main loop.
 type Bridge struct {
-	mu    sync.Mutex
 	state *pb.GetDiagnosticsResponse
+	mu    sync.Mutex
 }
 
 func NewBridge() *Bridge {
@@ -111,30 +111,45 @@ func (s *Server) Stop() {
 	lg().Info("stopped", zap.String("path", s.path))
 }
 
-func listenUnix(path string) (net.Listener, error) {
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return nil, err
-	}
-	ln, err := net.Listen("unix", path)
-	if err == nil {
-		_ = os.Chmod(path, 0o600)
-		return ln, nil
-	}
-	conn, dialErr := net.DialTimeout("unix", path, 200*time.Millisecond)
-	if dialErr == nil {
-		_ = conn.Close()
-		return nil, fmt.Errorf("already running (%s)", path)
-	}
-	lg().Info("removed stale socket", zap.String("path", path))
-	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return nil, err
-	}
-	ln, err = net.Listen("unix", path)
+func unixListen(path string) (net.Listener, error) {
+	ln, err := (&net.ListenConfig{}).Listen(context.Background(), "unix", path)
 	if err != nil {
 		return nil, err
 	}
 	_ = os.Chmod(path, 0o600)
 	return ln, nil
+}
+
+func unixInUse(path string) bool {
+	d := &net.Dialer{Timeout: 200 * time.Millisecond}
+	conn, err := d.DialContext(context.Background(), "unix", path)
+	if err != nil {
+		return false
+	}
+	_ = conn.Close()
+	return true
+}
+
+func recoverUnix(path string) (net.Listener, error) {
+	if unixInUse(path) {
+		return nil, fmt.Errorf("already running (%s)", path)
+	}
+	lg().Info("removed stale socket", zap.String("path", path))
+	if rmErr := os.Remove(path); rmErr != nil && !errors.Is(rmErr, os.ErrNotExist) {
+		return nil, rmErr
+	}
+	return unixListen(path)
+}
+
+func listenUnix(path string) (net.Listener, error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return nil, err
+	}
+	ln, err := unixListen(path)
+	if err == nil {
+		return ln, nil
+	}
+	return recoverUnix(path)
 }
 
 func lg() *zap.Logger { return zap.L().Named("debug") }

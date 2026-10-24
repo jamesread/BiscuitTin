@@ -38,23 +38,26 @@ func LoadRecent(cacheDir string) (Image, bool) {
 	return Image{}, false
 }
 
-func saveRecent(dir, src, credit string) error {
-	if dir == "" || src == "" {
-		return nil
+func shouldSaveRecent(dir, src string) bool {
+	if dir == "" {
+		return false
 	}
-	if sameDir(src, dir) {
-		return nil
+	if src == "" {
+		return false
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
+	return !sameDir(src, dir)
+}
+
+func recentExt(src string) string {
 	ext := strings.ToLower(filepath.Ext(src))
 	switch ext {
 	case ".jpg", ".jpeg", ".png":
-	default:
-		ext = ".jpg"
+		return ext
 	}
-	dest := filepath.Join(dir, time.Now().UTC().Format("20060102T150405.000000000")+ext)
+	return ".jpg"
+}
+
+func writeRecentFiles(dest, src, credit, dir string) error {
 	raw, err := os.ReadFile(src)
 	if err != nil {
 		return err
@@ -67,6 +70,17 @@ func saveRecent(dir, src, credit string) error {
 	}
 	pruneCache(dir, recentKeep)
 	return nil
+}
+
+func saveRecent(dir, src, credit string) error {
+	if !shouldSaveRecent(dir, src) {
+		return nil
+	}
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		return err
+	}
+	dest := filepath.Join(dir, time.Now().UTC().Format("20060102T150405.000000000")+recentExt(src))
+	return writeRecentFiles(dest, src, credit, dir)
 }
 
 func sameDir(path, dir string) bool {

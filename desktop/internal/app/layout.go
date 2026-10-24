@@ -23,7 +23,7 @@ func layoutScale(w, h float32) float32 {
 
 // columnsFit is the configured column count, capped so each tile stays at
 // least minTile wide in the grid.
-func columnsFit(configured, n int, gridW, gap, minTile float32) int {
+func defaultColumns(configured, n int) int {
 	c := configured
 	if c <= 0 {
 		c = 5
@@ -32,15 +32,24 @@ func columnsFit(configured, n int, gridW, gap, minTile float32) int {
 		return 0
 	}
 	if c > n {
-		c = n
+		return n
 	}
-	maxFit := 1
-	if minTile+gap > 0 {
-		maxFit = int(gridW / (minTile + gap))
-		if maxFit < 1 {
-			maxFit = 1
-		}
+	return c
+}
+
+func maxColumns(gridW, gap, minTile float32) int {
+	if minTile+gap <= 0 {
+		return 1
 	}
+	return max(int(gridW/(minTile+gap)), 1)
+}
+
+func columnsFit(configured, n int, gridW, gap, minTile float32) int {
+	c := defaultColumns(configured, n)
+	if c == 0 {
+		return 0
+	}
+	maxFit := maxColumns(gridW, gap, minTile)
 	if c > maxFit {
 		return maxFit
 	}
@@ -50,52 +59,78 @@ func columnsFit(configured, n int, gridW, gap, minTile float32) int {
 // wrapLines splits s onto at most maxLines of maxW, as measured by width.
 // The last line is ellipsised when there are leftover words.
 func wrapLines(s string, maxW float32, maxLines int, width func(string) float32) []string {
-	if maxLines < 1 || maxW <= 0 {
+	if maxLines < 1 {
+		return nil
+	}
+	if maxW <= 0 {
 		return nil
 	}
 	words := strings.Fields(s)
 	if len(words) == 0 {
 		return nil
 	}
+	return finishWrap(placeWords(words, maxW, maxLines, width), words, maxW, width)
+}
+
+func joinWord(cur, w string) string {
+	if cur == "" {
+		return w
+	}
+	return cur + " " + w
+}
+
+func placeWords(words []string, maxW float32, maxLines int, width func(string) float32) []string {
 	var lines []string
 	cur := ""
-	flush := func() {
-		if cur != "" {
-			lines = append(lines, cur)
-			cur = ""
-		}
-	}
 	for _, w := range words {
 		if len(lines) == maxLines {
 			break
 		}
-		trial := w
-		if cur != "" {
-			trial = cur + " " + w
-		}
-		if width(trial) <= maxW {
-			cur = trial
-			continue
-		}
-		if cur != "" {
-			flush()
-			if len(lines) == maxLines {
-				break
-			}
-			if width(w) <= maxW {
-				cur = w
-				continue
-			}
-		}
-		lines = append(lines, ellipsisLine(w, maxW, width))
-		cur = ""
+		lines, cur = placeWord(lines, cur, w, maxW, maxLines, width)
 	}
-	if cur != "" && len(lines) < maxLines {
-		lines = append(lines, cur)
+	return flushCur(lines, cur, maxLines)
+}
+
+func placeWord(lines []string, cur, w string, maxW float32, maxLines int, width func(string) float32) ([]string, string) {
+	trial := joinWord(cur, w)
+	if width(trial) <= maxW {
+		return lines, trial
 	}
-	if moreWords(words, lines) && len(lines) > 0 {
-		lines[len(lines)-1] = ellipsisLine(lines[len(lines)-1], maxW, width)
+	return breakWord(lines, cur, w, maxW, maxLines, width)
+}
+
+func breakWord(lines []string, cur, w string, maxW float32, maxLines int, width func(string) float32) ([]string, string) {
+	if cur == "" {
+		return append(lines, ellipsisLine(w, maxW, width)), ""
 	}
+	lines = append(lines, cur)
+	if len(lines) == maxLines {
+		return lines, ""
+	}
+	if width(w) <= maxW {
+		return lines, w
+	}
+	return append(lines, ellipsisLine(w, maxW, width)), ""
+}
+
+func flushCur(lines []string, cur string, maxLines int) []string {
+	if cur == "" {
+		return lines
+	}
+	if len(lines) >= maxLines {
+		return lines
+	}
+	return append(lines, cur)
+}
+
+func finishWrap(lines, words []string, maxW float32, width func(string) float32) []string {
+	if !moreWords(words, lines) {
+		return lines
+	}
+	if len(lines) == 0 {
+		return lines
+	}
+	lines[len(lines)-1] = ellipsisLine(lines[len(lines)-1], maxW, width)
 	return lines
 }
 
@@ -107,13 +142,14 @@ func moreWords(words, lines []string) bool {
 	return n < len(words)
 }
 
-func ellipsisLine(s string, maxW float32, width func(string) float32) string {
-	if strings.HasSuffix(s, "...") && width(s) <= maxW {
-		return s
+func alreadyEllipsis(s string, maxW float32, width func(string) float32) bool {
+	if !strings.HasSuffix(s, "...") {
+		return false
 	}
-	if width(s+"...") <= maxW {
-		return s + "..."
-	}
+	return width(s) <= maxW
+}
+
+func shrinkEllipsis(s string, maxW float32, width func(string) float32) string {
 	r := []rune(s)
 	for len(r) > 1 {
 		r = r[:len(r)-1]
@@ -123,4 +159,14 @@ func ellipsisLine(s string, maxW float32, width func(string) float32) string {
 		}
 	}
 	return "..."
+}
+
+func ellipsisLine(s string, maxW float32, width func(string) float32) string {
+	if alreadyEllipsis(s, maxW, width) {
+		return s
+	}
+	if width(s+"...") <= maxW {
+		return s + "..."
+	}
+	return shrinkEllipsis(s, maxW, width)
 }

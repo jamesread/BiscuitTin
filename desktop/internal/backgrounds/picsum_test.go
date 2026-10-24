@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -148,10 +149,5 @@ func TestWikimediaOrientationOK(t *testing.T) {
 }
 
 func containsPath(got []string, want string) bool {
-	for _, g := range got {
-		if g == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(got, want)
 }

@@ -24,12 +24,22 @@ var (
 	date    = "nodate"
 )
 
+func handledDebugCommand() bool {
+	if len(os.Args) <= 1 {
+		return false
+	}
+	if os.Args[1] != "debug" {
+		return false
+	}
+	if err := debugctl.PrintDiagnostics(os.Stdout); err != nil {
+		fmt.Fprintf(os.Stderr, "biscuittin debug: %v\n", err)
+		os.Exit(1)
+	}
+	return true
+}
+
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "debug" {
-		if err := debugctl.PrintDiagnostics(os.Stdout); err != nil {
-			fmt.Fprintf(os.Stderr, "biscuittin debug: %v\n", err)
-			os.Exit(1)
-		}
+	if handledDebugCommand() {
 		return
 	}
 
@@ -51,6 +61,13 @@ func main() {
 }
 
 // run is main without os.Exit, so the deferred log flush always happens.
+func parseWindowSize(sizeFlag string) (image.Point, error) {
+	if sizeFlag == "" {
+		return image.Point{}, nil
+	}
+	return app.ParseSize(sizeFlag)
+}
+
 func run(logger *zap.Logger, configPath string, windowed bool, sizeFlag, scriptPath string) int {
 	defer func() { _ = logger.Sync() }()
 	zap.ReplaceGlobals(logger)
@@ -66,12 +83,10 @@ func run(logger *zap.Logger, configPath string, windowed bool, sizeFlag, scriptP
 		logger.Error("config", zap.Error(err))
 		return 1
 	}
-	var size image.Point
-	if sizeFlag != "" {
-		if size, err = app.ParseSize(sizeFlag); err != nil {
-			logger.Error("bad -size", zap.Error(err))
-			return 2
-		}
+	size, err := parseWindowSize(sizeFlag)
+	if err != nil {
+		logger.Error("bad -size", zap.Error(err))
+		return 2
 	}
 
 	err = app.Run(cfg, app.Options{

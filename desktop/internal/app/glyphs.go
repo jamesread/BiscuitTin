@@ -46,36 +46,48 @@ func detectLayout(name string) padLayout {
 	return layoutXbox
 }
 
+var glyphXbox = map[glyphRole]string{
+	glyphConfirm:   "xbox-a",
+	glyphBack:      "xbox-b",
+	glyphMove:      "device-gamepad-3",
+	glyphLeftRight: "arrows-left-right",
+	glyphGuide:     "brand-xbox",
+}
+
+var glyphPS = map[glyphRole]string{
+	glyphConfirm: "playstation-x",
+	glyphBack:    "playstation-circle",
+	glyphGuide:   "home",
+}
+
 func glyphFile(role glyphRole, layout padLayout) string {
-	ps := layout == layoutPlayStation
-	switch role {
-	case glyphConfirm:
-		if ps {
-			return "playstation-x"
+	if layout == layoutPlayStation {
+		if name, ok := glyphPS[role]; ok {
+			return name
 		}
-		return "xbox-a"
-	case glyphBack:
-		if ps {
-			return "playstation-circle"
-		}
-		return "xbox-b"
-	case glyphMove:
-		return "device-gamepad-3"
-	case glyphLeftRight:
-		return "arrows-left-right"
-	case glyphGuide:
-		if ps {
-			return "home"
-		}
-		return "brand-xbox"
 	}
-	return ""
+	return glyphXbox[role]
 }
 
 const glyphRasterSize = 96
 
 // loadGlyphs renders every embedded glyph to a white texture. Must run on the
 // main thread.
+func loadGlyph(name string) (rl.Texture2D, bool) {
+	raw, err := gamepadSVGs.ReadFile("assets/gamepad/" + name)
+	if err != nil {
+		return rl.Texture2D{}, false
+	}
+	img, err := icons.RasterizeSVG(raw, glyphRasterSize)
+	if err != nil {
+		lg().Warn("gamepad glyph", zap.String("file", name), zap.Error(err))
+		return rl.Texture2D{}, false
+	}
+	icons.TintWhite(img)
+	t := textureFromRGBA(img)
+	return t, t.ID != 0
+}
+
 func loadGlyphs() map[string]rl.Texture2D {
 	out := map[string]rl.Texture2D{}
 	entries, err := gamepadSVGs.ReadDir("assets/gamepad")
@@ -84,20 +96,11 @@ func loadGlyphs() map[string]rl.Texture2D {
 		return out
 	}
 	for _, e := range entries {
-		raw, err := gamepadSVGs.ReadFile("assets/gamepad/" + e.Name())
-		if err != nil {
+		t, ok := loadGlyph(e.Name())
+		if !ok {
 			continue
 		}
-		img, err := icons.RasterizeSVG(raw, glyphRasterSize)
-		if err != nil {
-			lg().Warn("gamepad glyph", zap.String("file", e.Name()), zap.Error(err))
-			continue
-		}
-		icons.TintWhite(img)
-		t := textureFromRGBA(img)
-		if t.ID != 0 {
-			out[strings.TrimSuffix(e.Name(), path.Ext(e.Name()))] = t
-		}
+		out[strings.TrimSuffix(e.Name(), path.Ext(e.Name()))] = t
 	}
 	return out
 }

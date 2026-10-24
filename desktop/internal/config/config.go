@@ -19,87 +19,49 @@ var defaultYAML []byte
 
 // Config is the top level biscuittin.yaml document.
 type Config struct {
-	Title      string `yaml:"title"`
-	Fullscreen *bool  `yaml:"fullscreen"`
-	Font       string `yaml:"font"`
-	Columns    int    `yaml:"columns"`
-	Background string `yaml:"background"`
-	Accent     string `yaml:"accent"`
-
-	// TileColor fills every tile. It is darkened automatically if needed so
-	// the white icons and letters on it meet WCAG AA contrast.
-	TileColor string `yaml:"tileColor"`
-	LogDir    string `yaml:"logDir"`
-
-	// CacheDir holds downloaded and rendered icons. Default ~/.cache/biscuittin.
-	CacheDir string `yaml:"cacheDir"`
-
-	// IconProviders are searched in order for entries without an icon file.
-	// Default [thesvg]; an empty list disables icon lookups.
-	IconProviders []string `yaml:"iconProviders"`
-
-	Backgrounds BackgroundConfig `yaml:"backgrounds"`
-
-	// RSS feeds are shown as article summaries on the idle home screen.
-	RSS RSSConfig `yaml:"rss"`
-
-	// OliveTin enables More > OliveTin actions when url is set.
-	OliveTin OliveTinConfig `yaml:"olivetin"`
-
-	// WebControl configures the web remote, switched on from Settings.
-	WebControl WebControlConfig `yaml:"webControl"`
-
-	// HomeAssistant enables More > Home Assistant automations when url is set.
-	HomeAssistant HomeAssistantConfig `yaml:"homeassistant"`
-
-	// IdleFadeSeconds fades the tiles and menus out after this many seconds
-	// without input, while a background image or RSS headlines can be shown.
-	// 0 disables. Default 20.
-	IdleFadeSeconds *float64 `yaml:"idleFadeSeconds"`
-
-	// HideOnLaunch unmaps the launcher window while a launched app is in front.
-	HideOnLaunch *bool `yaml:"hideOnLaunch"`
-
-	// RestoreHoldSeconds is how long the gamepad Guide button must be held to
-	// bring a hidden launcher back.
-	RestoreHoldSeconds float64 `yaml:"restoreHoldSeconds"`
-
-	Entries []Entry `yaml:"entries"`
+	Fullscreen         *bool               `yaml:"fullscreen"`
+	HideOnLaunch       *bool               `yaml:"hideOnLaunch"`
+	IdleFadeSeconds    *float64            `yaml:"idleFadeSeconds"`
+	HomeAssistant      HomeAssistantConfig `yaml:"homeassistant"`
+	CacheDir           string              `yaml:"cacheDir"`
+	Background         string              `yaml:"background"`
+	TileColor          string              `yaml:"tileColor"`
+	LogDir             string              `yaml:"logDir"`
+	Title              string              `yaml:"title"`
+	Font               string              `yaml:"font"`
+	Accent             string              `yaml:"accent"`
+	OliveTin           OliveTinConfig      `yaml:"olivetin"`
+	IconProviders      []string            `yaml:"iconProviders"`
+	Entries            []Entry             `yaml:"entries"`
+	Backgrounds        BackgroundConfig    `yaml:"backgrounds"`
+	RSS                RSSConfig           `yaml:"rss"`
+	WebControl         WebControlConfig    `yaml:"webControl"`
+	Columns            int                 `yaml:"columns"`
+	RestoreHoldSeconds float64             `yaml:"restoreHoldSeconds"`
 }
 
 // BackgroundConfig sets defaults for background images. Enabled and Interval
 // can be changed from the More menu; those choices are saved as settings and
 // take precedence.
 type BackgroundConfig struct {
-	Enabled *bool `yaml:"enabled"`
-	// Providers are used in rotation. Default [wikimedia, picsum].
+	Enabled   *bool    `yaml:"enabled"`
+	Dir       string   `yaml:"dir"`
 	Providers []string `yaml:"providers"`
-	// Dir holds your own images for the local provider.
-	Dir string `yaml:"dir"`
-	// Interval is seconds between images, 60 to 86400. Default 60.
-	Interval int `yaml:"interval"`
-	// Dim darkens images so text stays readable, 0 to 1. Default 0.45.
-	Dim float32 `yaml:"dim"`
+	Interval  int      `yaml:"interval"`
+	Dim       float32  `yaml:"dim"`
 }
 
 // Entry is one launchable tile.
 type Entry struct {
-	Title    string            `yaml:"title"`
-	Subtitle string            `yaml:"subtitle"`
-	Command  []string          `yaml:"command"`
-	Workdir  string            `yaml:"workdir"`
-	Env      map[string]string `yaml:"env"`
-	Icon     string            `yaml:"icon"`
-
-	// IconQuery is the provider search term. Default: the entry title.
-	IconQuery string `yaml:"iconQuery"`
-	// IconStyle is "mono" (white glyph, the default) or "color" (brand colours).
-	IconStyle string `yaml:"iconStyle"`
-
-	// RestoreOnExit shows the launcher again when the launched process exits.
-	// Disable for commands that hand off to an already-running instance and
-	// exit immediately (e.g. steam when the client is already up).
-	RestoreOnExit *bool `yaml:"restoreOnExit"`
+	Env           map[string]string `yaml:"env"`
+	RestoreOnExit *bool             `yaml:"restoreOnExit"`
+	Title         string            `yaml:"title"`
+	Subtitle      string            `yaml:"subtitle"`
+	Workdir       string            `yaml:"workdir"`
+	Icon          string            `yaml:"icon"`
+	IconQuery     string            `yaml:"iconQuery"`
+	IconStyle     string            `yaml:"iconStyle"`
+	Command       []string          `yaml:"command"`
 }
 
 var defaultFonts = []string{
@@ -128,42 +90,53 @@ func DefaultPath() string {
 // Load reads the YAML config at path. If the file does not exist, a default
 // is written there first and startup continues from that file.
 func Load(path string) (*Config, error) {
-	raw, err := os.ReadFile(path)
+	raw, err := readOrWriteDefault(path)
 	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return nil, err
-		}
-		if err := writeDefault(path); err != nil {
-			return nil, fmt.Errorf("write default config %s: %w", path, err)
-		}
-		raw, err = os.ReadFile(path)
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
-
 	cfg := &Config{}
-	if err := yaml.Unmarshal(raw, cfg); err != nil {
+	if err = yaml.Unmarshal(raw, cfg); err != nil {
 		return nil, fmt.Errorf("parse %s: %w", path, err)
 	}
-
 	ApplyDefaults(cfg)
+	return validateEntries(path, cfg)
+}
 
+func readOrWriteDefault(path string) ([]byte, error) {
+	raw, err := os.ReadFile(path)
+	if err == nil {
+		return raw, nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	if err = writeDefault(path); err != nil {
+		return nil, fmt.Errorf("write default config %s: %w", path, err)
+	}
+	return os.ReadFile(path)
+}
+
+func validateEntries(path string, cfg *Config) (*Config, error) {
 	if len(cfg.Entries) == 0 {
 		return nil, fmt.Errorf("%s: no entries defined", path)
 	}
-
-	for i, e := range cfg.Entries {
-		if len(e.Command) == 0 {
-			return nil, fmt.Errorf("%s: entry %d (%q) has no command", path, i, e.Title)
-		}
+	if err := requireCommands(path, cfg.Entries); err != nil {
+		return nil, err
 	}
-
 	return cfg, nil
 }
 
+func requireCommands(path string, entries []Entry) error {
+	for i, e := range entries {
+		if len(e.Command) == 0 {
+			return fmt.Errorf("%s: entry %d (%q) has no command", path, i, e.Title)
+		}
+	}
+	return nil
+}
+
 func writeDefault(path string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return err
 	}
 	if err := fsutil.WriteFileAtomic(path, defaultYAML); err != nil {
@@ -174,28 +147,40 @@ func writeDefault(path string) error {
 }
 
 func ApplyDefaults(cfg *Config) {
+	applyChromeDefaults(cfg)
+	applyPathDefaults(cfg)
+	applyProviderDefaults(cfg)
+	applyRSSDefaults(cfg)
+	applyFontDefault(cfg)
+	expandEntryIcons(cfg)
+}
+
+func applyChromeDefaults(cfg *Config) {
+	applyTitleDefault(cfg)
+	setIfEmpty(&cfg.TileColor, "#3d5a80")
+	setIfEmpty(&cfg.Background, "#14161f")
+	setIfEmpty(&cfg.Accent, "#f2b134")
+	if cfg.RestoreHoldSeconds <= 0 {
+		cfg.RestoreHoldSeconds = 1.0
+	}
+}
+
+func applyTitleDefault(cfg *Config) {
 	if cfg.Title == "" {
 		cfg.Title = "BiscuitTin on {hostname}"
 	}
 	cfg.Title = strings.ReplaceAll(cfg.Title, "{hostname}", shortHostname())
-	if cfg.TileColor == "" {
-		cfg.TileColor = "#3d5a80"
+}
+
+func setIfEmpty(dst *string, def string) {
+	if *dst == "" {
+		*dst = def
 	}
-	if cfg.Background == "" {
-		cfg.Background = "#14161f"
-	}
-	if cfg.Accent == "" {
-		cfg.Accent = "#f2b134"
-	}
-	if cfg.RestoreHoldSeconds <= 0 {
-		cfg.RestoreHoldSeconds = 1.0
-	}
+}
+
+func applyPathDefaults(cfg *Config) {
 	if cfg.CacheDir == "" {
-		if dir, err := os.UserCacheDir(); err == nil {
-			cfg.CacheDir = filepath.Join(dir, "biscuittin")
-		} else {
-			cfg.CacheDir = filepath.Join(os.TempDir(), "biscuittin")
-		}
+		cfg.CacheDir = defaultCacheDir()
 	}
 	cfg.CacheDir = ExpandPath(cfg.CacheDir)
 	cfg.Backgrounds.Dir = ExpandPath(cfg.Backgrounds.Dir)
@@ -203,6 +188,16 @@ func ApplyDefaults(cfg *Config) {
 		cfg.LogDir = cfg.CacheDir
 	}
 	cfg.LogDir = ExpandPath(cfg.LogDir)
+}
+
+func defaultCacheDir() string {
+	if dir, err := os.UserCacheDir(); err == nil {
+		return filepath.Join(dir, "biscuittin")
+	}
+	return filepath.Join(os.TempDir(), "biscuittin")
+}
+
+func applyProviderDefaults(cfg *Config) {
 	if cfg.IconProviders == nil {
 		cfg.IconProviders = []string{"thesvg"}
 	}
@@ -210,9 +205,20 @@ func ApplyDefaults(cfg *Config) {
 		cfg.Backgrounds.Providers = []string{"wikimedia", "picsum"}
 	}
 	cfg.Backgrounds.Interval = ClampInterval(cfg.Backgrounds.Interval)
-	if cfg.Backgrounds.Dim <= 0 || cfg.Backgrounds.Dim > 1 {
+	clampBackgroundDim(cfg)
+}
+
+func clampBackgroundDim(cfg *Config) {
+	if cfg.Backgrounds.Dim <= 0 {
+		cfg.Backgrounds.Dim = 0.45
+		return
+	}
+	if cfg.Backgrounds.Dim > 1 {
 		cfg.Backgrounds.Dim = 0.45
 	}
+}
+
+func applyRSSDefaults(cfg *Config) {
 	if cfg.RSS.Interval <= 0 {
 		cfg.RSS.Interval = 15 * 60
 	}
@@ -222,16 +228,21 @@ func ApplyDefaults(cfg *Config) {
 	}
 	cfg.RSS.RotateSeconds = ClampInterval(cfg.RSS.RotateSeconds)
 	cfg.RSS.Feeds = cleanRSSFeeds(cfg.RSS.Feeds)
+}
 
-	if cfg.Font == "" {
-		for _, f := range defaultFonts {
-			if _, err := os.Stat(f); err == nil {
-				cfg.Font = f
-				break
-			}
+func applyFontDefault(cfg *Config) {
+	if cfg.Font != "" {
+		return
+	}
+	for _, f := range defaultFonts {
+		if _, err := os.Stat(f); err == nil {
+			cfg.Font = f
+			return
 		}
 	}
+}
 
+func expandEntryIcons(cfg *Config) {
 	for i := range cfg.Entries {
 		cfg.Entries[i].Icon = ExpandPath(cfg.Entries[i].Icon)
 	}
@@ -253,13 +264,18 @@ func ExpandPath(p string) string {
 	if p == "" {
 		return p
 	}
-	p = os.ExpandEnv(p)
-	if len(p) > 1 && p[:2] == "~/" {
-		if home, err := os.UserHomeDir(); err == nil {
-			p = filepath.Join(home, p[2:])
-		}
+	return expandHome(os.ExpandEnv(p))
+}
+
+func expandHome(p string) string {
+	if !strings.HasPrefix(p, "~/") {
+		return p
 	}
-	return p
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return p
+	}
+	return filepath.Join(home, p[2:])
 }
 
 // OliveTinConfig points BiscuitTin at an OliveTin server whose actions can be

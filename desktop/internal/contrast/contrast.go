@@ -67,38 +67,45 @@ const maxBackingAlpha = 0.85
 // SolveBacking returns the smallest black backing alpha, and the smallest
 // text alpha not below the requested one, that give text of colour fg at
 // alpha fgAlpha at least minContrast against backdrop.
-func SolveBacking(fg RGB, fgAlpha float64, backdrop RGB) (backing, textAlpha float64) {
-	ok := func(backing, ta float64) bool {
-		bg := backdrop.Scale(1 - backing)
-		return Ratio(fg.Over(bg, ta), bg) >= minContrast
-	}
+func contrastOK(fg, backdrop RGB, backing, ta float64) bool {
+	bg := backdrop.Scale(1 - backing)
+	return Ratio(fg.Over(bg, ta), bg) >= minContrast
+}
 
-	if ok(0, fgAlpha) {
-		return 0, fgAlpha
-	}
-	if ok(maxBackingAlpha, fgAlpha) {
-		lo, hi := 0.0, maxBackingAlpha
-		for i := 0; i < 12; i++ {
-			mid := (lo + hi) / 2
-			if ok(mid, fgAlpha) {
-				hi = mid
-			} else {
-				lo = mid
-			}
-		}
-		return hi, fgAlpha
-	}
-
-	lo, hi := fgAlpha, 1.0
-	for i := 0; i < 12; i++ {
+func searchBacking(fg RGB, fgAlpha float64, backdrop RGB) float64 {
+	lo, hi := 0.0, maxBackingAlpha
+	for range 12 {
 		mid := (lo + hi) / 2
-		if ok(maxBackingAlpha, mid) {
+		if contrastOK(fg, backdrop, mid, fgAlpha) {
 			hi = mid
 		} else {
 			lo = mid
 		}
 	}
-	return maxBackingAlpha, hi
+	return hi
+}
+
+func searchText(fg RGB, fgAlpha float64, backdrop RGB) float64 {
+	lo, hi := fgAlpha, 1.0
+	for range 12 {
+		mid := (lo + hi) / 2
+		if contrastOK(fg, backdrop, maxBackingAlpha, mid) {
+			hi = mid
+		} else {
+			lo = mid
+		}
+	}
+	return hi
+}
+
+func SolveBacking(fg RGB, fgAlpha float64, backdrop RGB) (backing, textAlpha float64) {
+	if contrastOK(fg, backdrop, 0, fgAlpha) {
+		return 0, fgAlpha
+	}
+	if contrastOK(fg, backdrop, maxBackingAlpha, fgAlpha) {
+		return searchBacking(fg, fgAlpha, backdrop), fgAlpha
+	}
+	return maxBackingAlpha, searchText(fg, fgAlpha, backdrop)
 }
 
 // Tile glyphs: white icons, and letters drawn at this alpha. The top half of
@@ -113,7 +120,7 @@ const (
 // highlight, reach minContrast. Unselected tiles are drawn darker still.
 func AccessibleTileColor(c color.RGBA) color.RGBA {
 	white := RGB{1, 1, 1}
-	for i := 0; i < 64; i++ {
+	for range 64 {
 		bg := white.Over(RGBOf(c), TileHighlightAlpha)
 		if Ratio(white.Over(bg, TileGlyphAlpha), bg) >= minContrast {
 			return c
@@ -126,10 +133,12 @@ func AccessibleTileColor(c color.RGBA) color.RGBA {
 // LumGrid records the brightest pixel in each cell of an image, so the worst
 // case behind any piece of text can be looked up cheaply every frame.
 type LumGrid struct {
-	W, H       int // source image size
-	cols, rows int
-	cells      []RGB
-	lums       []float64
+	cells []RGB
+	lums  []float64
+	W     int
+	H     int
+	cols  int
+	rows  int
 }
 
 const (
@@ -165,10 +174,10 @@ func BuildLumGrid(img *image.RGBA) *LumGrid {
 
 // Brightest returns the Brightest cell colour within an image-space rectangle.
 func (g *LumGrid) Brightest(x0, y0, x1, y1 float64) RGB {
-	c0 := clampInt(int(x0*float64(g.cols)/float64(g.W)), 0, g.cols-1)
-	c1 := clampInt(int(x1*float64(g.cols)/float64(g.W)), 0, g.cols-1)
-	r0 := clampInt(int(y0*float64(g.rows)/float64(g.H)), 0, g.rows-1)
-	r1 := clampInt(int(y1*float64(g.rows)/float64(g.H)), 0, g.rows-1)
+	c0 := clampInt(int(x0*float64(g.cols)/float64(g.W)), g.cols-1)
+	c1 := clampInt(int(x1*float64(g.cols)/float64(g.W)), g.cols-1)
+	r0 := clampInt(int(y0*float64(g.rows)/float64(g.H)), g.rows-1)
+	r1 := clampInt(int(y1*float64(g.rows)/float64(g.H)), g.rows-1)
 
 	var out RGB
 	best := -1.0
@@ -182,14 +191,8 @@ func (g *LumGrid) Brightest(x0, y0, x1, y1 float64) RGB {
 	return out
 }
 
-func clampInt(v, lo, hi int) int {
-	if v < lo {
-		return lo
-	}
-	if v > hi {
-		return hi
-	}
-	return v
+func clampInt(v, hi int) int {
+	return min(max(v, 0), hi)
 }
 
 // ParseHex parses #rrggbb, returning def if it is malformed.

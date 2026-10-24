@@ -10,9 +10,9 @@ import (
 // left/right pick the neighbouring option and A cycles through them. It is
 // generic over its options; boolRadio covers the common two-state case.
 type radioGroup struct {
-	options []string
 	get     func() int
 	set     func(int)
+	options []string
 }
 
 // boolRadio makes a two-option group, e.g. "Shown"/"Hidden", bound to a bool.
@@ -30,7 +30,7 @@ func boolRadio(trueLabel, falseLabel string, get func() bool, set func(bool)) *r
 }
 
 func (rg *radioGroup) step(dir int) {
-	i := clampInt(rg.get()+dir, 0, len(rg.options)-1)
+	i := clampInt(rg.get()+dir, len(rg.options)-1)
 	if i != rg.get() {
 		rg.set(i)
 	}

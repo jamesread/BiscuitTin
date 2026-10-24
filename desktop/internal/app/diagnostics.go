@@ -20,12 +20,7 @@ func (u *ui) diagnostics() []diagRow {
 	b := installationinfo.Build
 	host, _ := os.Hostname()
 
-	gamepads := 0
-	for g := int32(0); g < maxGamepads; g++ {
-		if rl.IsGamepadAvailable(g) {
-			gamepads++
-		}
-	}
+	gamepads := int(countGamepads())
 
 	m := rl.GetCurrentMonitor()
 	display := fmt.Sprintf("%d x %d @ %d Hz", rl.GetScreenWidth(), rl.GetScreenHeight(), rl.GetMonitorRefreshRate(m))
@@ -52,21 +47,20 @@ func (u *ui) diagnostics() []diagRow {
 }
 
 // debugSnapshot is published to the local debug socket each frame.
-func (u *ui) debugSnapshot(hidden bool) *pb.GetDiagnosticsResponse {
-	b := installationinfo.Build
-	host, _ := os.Hostname()
-
-	gamepads := int32(0)
-	for g := int32(0); g < maxGamepads; g++ {
+func countGamepads() int32 {
+	n := int32(0)
+	for g := range int32(maxGamepads) {
 		if rl.IsGamepadAvailable(g) {
-			gamepads++
+			n++
 		}
 	}
+	return n
+}
 
-	m := rl.GetCurrentMonitor()
+func snapshotMonitors() []*pb.Monitor {
 	n := rl.GetMonitorCount()
 	monitors := make([]*pb.Monitor, 0, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		monitors = append(monitors, &pb.Monitor{
 			Index:  int32(i),
 			Width:  int32(rl.GetMonitorWidth(i)),
@@ -74,16 +68,33 @@ func (u *ui) debugSnapshot(hidden bool) *pb.GetDiagnosticsResponse {
 			Name:   rl.GetMonitorName(i),
 		})
 	}
+	return monitors
+}
 
-	selected := ""
-	if u.selected >= 0 && u.selected < len(u.tiles) {
-		selected = u.tiles[u.selected].key
+func (u *ui) selectedTileKey() string {
+	if u.selected < 0 {
+		return ""
 	}
-	msg := ""
-	if u.toast != "" && rl.GetTime() < u.toastUntil {
-		msg = u.toast
+	if u.selected >= len(u.tiles) {
+		return ""
 	}
+	return u.tiles[u.selected].key
+}
 
+func (u *ui) toastMessage() string {
+	if u.toast == "" {
+		return ""
+	}
+	if rl.GetTime() >= u.toastUntil {
+		return ""
+	}
+	return u.toast
+}
+
+func (u *ui) debugSnapshot(hidden bool) *pb.GetDiagnosticsResponse {
+	b := installationinfo.Build
+	host, _ := os.Hostname()
+	m := rl.GetCurrentMonitor()
 	return &pb.GetDiagnosticsResponse{
 		Version:      b.Version,
 		Commit:       b.Commit,
@@ -105,12 +116,12 @@ func (u *ui) debugSnapshot(hidden bool) *pb.GetDiagnosticsResponse {
 		Display: &pb.Display{
 			CurrentIndex: int32(m),
 			RefreshHz:    int32(rl.GetMonitorRefreshRate(m)),
-			Monitors:     monitors,
+			Monitors:     snapshotMonitors(),
 		},
 		Screen:        screenNames[u.screen],
-		SelectedTile:  selected,
-		Message:       msg,
-		GamepadCount:  gamepads,
+		SelectedTile:  u.selectedTileKey(),
+		Message:       u.toastMessage(),
+		GamepadCount:  countGamepads(),
 		PrimaryInput:  u.primaryInputLabel(),
 		Olivetin:      u.cfg.OliveTin.URL,
 		HomeAssistant: u.cfg.HomeAssistant.URL,

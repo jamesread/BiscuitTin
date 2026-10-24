@@ -1,0 +1,86 @@
+# BiscuitTin Go static analysis, copied from OliveTin's golangci-lint config.
+#
+# This config replaces the former standalone tools:
+#   go vet ./...              -> govet (enable-all)
+#   gocyclo -over 4           -> gocyclo min-complexity: 5
+#   gocritic check ./...      -> gocritic
+#   errcheck, staticcheck, ...-> same-named golangci-lint linters
+#
+# Cyclomatic complexity over 4 is not permitted (min-complexity 5 flags >4).
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    - bidichk
+    - bodyclose
+    - copyloopvar
+    - durationcheck
+    - errcheck
+    - errorlint
+    - gocritic
+    - gocyclo
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - modernize
+    - nilerr
+    - noctx
+#    - promlinter
+    - staticcheck
+    - testifylint
+    - thelper
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+  settings:
+    gocyclo:
+      min-complexity: 5
+    gosec:
+      # Full gosec rule set (G101–G6xx), including Slowloris checks G112/G114.
+      enable-all-rules: true
+    govet:
+      enable-all: true
+  exclusions:
+    paths:
+      - gen
+    rules:
+      # Noise / fixtures in tests and local tooling.
+      - path: _test\.go
+        linters:
+          - gosec
+      - path: _test\.go
+        text: "fieldalignment:"
+        linters:
+          - govet
+      - path: _test\.go
+        linters:
+          - gocyclo
+
+      # Launcher: tile commands and cache/config paths come from the user's YAML.
+      - path: internal/launch/
+        text: "G204:"
+        linters:
+          - gosec
+      - text: "G304:"
+        linters:
+          - gosec
+      # Random photo pick, not a secret.
+      - text: "G404:"
+        linters:
+          - gosec
+      # raylib texture upload from image.RGBA.Pix.
+      - path: internal/app/ui_background\.go
+        text: "G103:"
+        linters:
+          - gosec
+      # Protobuf int32 fields and packed RGBA bytes.
+      - text: "G115:"
+        linters:
+          - gosec

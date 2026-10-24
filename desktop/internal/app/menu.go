@@ -29,12 +29,12 @@ const (
 // screens that need setup), a radio group, or a stepped value whose adjust
 // gets -1/+1 from left/right (clamped) and 0 from A (cycles round).
 type menuItem struct {
-	title  string
-	target screen
 	open   func()
 	value  func() string
 	adjust func(dir int)
 	radio  *radioGroup
+	title  string
+	target screen
 }
 
 func (u *ui) moreMenu() []menuItem {
@@ -123,7 +123,6 @@ func (u *ui) runSystem(argv []string, fail string) {
 func (u *ui) integrationsMenu() []menuItem {
 	var items []menuItem
 	for _, src := range u.sources {
-		src := src
 		items = append(items, menuItem{
 			title: src.Title(),
 			open:  func() { u.openActionList(src.ID()) },
@@ -232,60 +231,90 @@ var gamepadButtonNames = map[int32]string{
 func (u *ui) handleMenu(a action) {
 	switch u.screen {
 	case screenMore, screenSettings, screenIntegrations, screenSystem, screenConfirm:
-		_, items, parent := u.menuFor(u.screen)
-		u.menuSel = clampInt(u.menuSel, 0, len(items)-1)
-		item := items[u.menuSel]
-		switch a {
-		case actionUp:
-			if u.menuSel > 0 {
-				u.menuSel--
-			}
-		case actionDown:
-			if u.menuSel < len(items)-1 {
-				u.menuSel++
-			}
-		case actionLeft, actionRight:
-			dir := 1
-			if a == actionLeft {
-				dir = -1
-			}
-			switch {
-			case item.radio != nil:
-				item.radio.step(dir)
-			case item.adjust != nil:
-				item.adjust(dir)
-			}
-		case actionActivate:
-			switch {
-			case item.radio != nil:
-				item.radio.cycle()
-			case item.adjust != nil:
-				item.adjust(0)
-			case item.open != nil:
-				item.open()
-			default:
-				u.screen = item.target
-			}
-		case actionBack, actionExit:
-			if parent == screenHome {
-				u.screen = screenHome
-			} else {
-				u.openMenu(parent)
-			}
-		}
-	case screenDiagnostics:
-		if a == actionBack || a == actionExit || a == actionActivate {
-			u.screen = screenMore
-		}
+		u.handleListMenu(a)
+	case screenDiagnostics, screenGamepads:
+		// On gamepads, B is a button worth inspecting, so only keyboard/remote
+		// Back and the A button leave. Diagnostics uses the same keys.
+		u.leaveInfoScreen(a)
 	case screenActionList:
 		u.handleActionList(a)
-	case screenGamepads:
-		// B is also a button worth inspecting here, so only keyboard/remote
-		// Back and the A button leave this screen.
-		if a == actionBack || a == actionExit || a == actionActivate {
-			u.screen = screenMore
-		}
 	}
+}
+
+func (u *ui) leaveInfoScreen(a action) {
+	switch a {
+	case actionBack, actionExit, actionActivate:
+		u.screen = screenMore
+	}
+}
+
+func (u *ui) handleListMenu(a action) {
+	_, items, parent := u.menuFor(u.screen)
+	u.menuSel = clampInt(u.menuSel, len(items)-1)
+	switch a {
+	case actionBack, actionExit:
+		u.leaveMenu(parent)
+	default:
+		u.applyListNav(a, items)
+	}
+}
+
+func (u *ui) applyListNav(a action, items []menuItem) {
+	item := items[u.menuSel]
+	switch a {
+	case actionUp, actionDown:
+		u.moveMenuSel(a, len(items))
+	case actionLeft, actionRight:
+		adjustMenuItem(item, a)
+	case actionActivate:
+		u.activateMenuItem(item)
+	}
+}
+
+func (u *ui) moveMenuSel(a action, n int) {
+	if a == actionUp {
+		u.menuSel = max(u.menuSel-1, 0)
+		return
+	}
+	u.menuSel = min(u.menuSel+1, n-1)
+}
+
+func adjustMenuItem(item menuItem, a action) {
+	dir := 1
+	if a == actionLeft {
+		dir = -1
+	}
+	if item.radio != nil {
+		item.radio.step(dir)
+		return
+	}
+	if item.adjust != nil {
+		item.adjust(dir)
+	}
+}
+
+func (u *ui) activateMenuItem(item menuItem) {
+	if item.radio != nil {
+		item.radio.cycle()
+		return
+	}
+	if item.adjust != nil {
+		item.adjust(0)
+		return
+	}
+	if item.open != nil {
+		item.open()
+		return
+	}
+	u.screen = item.target
+}
+
+func (u *ui) leaveMenu(parent screen) {
+	if parent == screenHome {
+		u.screen = screenHome
+		return
+	}
+	u.openMenu(parent)
 }
 
 func (u *ui) drawMenu(w, h, s, margin float32) {
@@ -294,7 +323,7 @@ func (u *ui) drawMenu(w, h, s, margin float32) {
 		title, items, _ := u.menuFor(u.screen)
 		u.drawListMenu(title, items, w, s, margin)
 	case screenGamepads:
-		u.drawGamepads(w, h, s, margin)
+		u.drawGamepads(w, s, margin)
 	case screenDiagnostics:
 		u.drawDiagnostics(w, h, s, margin)
 	case screenActionList:
@@ -304,105 +333,127 @@ func (u *ui) drawMenu(w, h, s, margin float32) {
 
 func (u *ui) drawListMenu(title string, items []menuItem, w, s, margin float32) {
 	u.text(u.fitText(title, 52*s, w-2*margin), margin, 190*s, 52*s, rl.ColorAlpha(rl.RayWhite, 0.85))
-
 	itemW := w - 2*margin
 	itemH := float32(74) * s
 	y := 290 * s
 	for i, item := range items {
-		r := rl.Rectangle{X: margin, Y: y, Width: itemW, Height: itemH}
-		selected := i == u.menuSel
-		fill := rl.ColorAlpha(rl.Black, 0.3)
-		textColor := rl.ColorAlpha(rl.RayWhite, 0.7)
-		if selected {
-			fill = rl.ColorAlpha(u.accent, 0.22)
-			textColor = rl.RayWhite
-		}
-		rl.DrawRectangleRounded(r, 0.25, 10, u.fa(fill))
-		if selected {
-			rl.DrawRectangleRoundedLinesEx(r, 0.25, 10, 4*s, u.fa(u.accent))
-		}
-		u.surface = &surfaceTint{contrast.RGBOf(fill), float64(fill.A) / 255}
-		u.text(item.title, r.X+36*s, r.Y+(itemH-40*s)/2, 40*s, textColor)
-
-		switch {
-		case item.radio != nil:
-			rh := itemH - 22*s
-			u.drawRadioGroup(item.radio, r.X+r.Width-18*s, r.Y+(itemH-rh)/2, rh, s, selected)
-		case item.value != nil:
-			v := item.value()
-			if selected && item.adjust != nil {
-				v = "<   " + v + "   >"
-			}
-			m := u.measure(v, 36*s)
-			valColor := rl.ColorAlpha(rl.RayWhite, 0.6)
-			if selected {
-				valColor = u.accent
-			}
-			u.text(v, r.X+r.Width-36*s-m.X, r.Y+(itemH-36*s)/2, 36*s, valColor)
-		}
-		u.surface = nil
+		u.drawMenuItem(item, i == u.menuSel, margin, y, itemW, itemH, s)
 		y += itemH + 14*s
 	}
 }
 
-func (u *ui) drawGamepads(w, h, s, margin float32) {
-	u.text("Gamepad info", margin, 190*s, 52*s, rl.ColorAlpha(rl.RayWhite, 0.85))
+func menuItemColors(accent rl.Color, selected bool) (fill, textColor rl.Color) {
+	if selected {
+		return rl.ColorAlpha(accent, 0.22), rl.RayWhite
+	}
+	return rl.ColorAlpha(rl.Black, 0.3), rl.ColorAlpha(rl.RayWhite, 0.7)
+}
 
+func menuValueColor(accent rl.Color, selected bool) rl.Color {
+	if selected {
+		return accent
+	}
+	return rl.ColorAlpha(rl.RayWhite, 0.6)
+}
+
+func (u *ui) drawMenuItem(item menuItem, selected bool, x, y, itemW, itemH, s float32) {
+	r := rl.Rectangle{X: x, Y: y, Width: itemW, Height: itemH}
+	fill, textColor := menuItemColors(u.accent, selected)
+	rl.DrawRectangleRounded(r, 0.25, 10, u.fa(fill))
+	if selected {
+		rl.DrawRectangleRoundedLinesEx(r, 0.25, 10, 4*s, u.fa(u.accent))
+	}
+	u.surface = &surfaceTint{contrast.RGBOf(fill), float64(fill.A) / 255}
+	u.text(item.title, r.X+36*s, r.Y+(itemH-40*s)/2, 40*s, textColor)
+	u.drawMenuValue(item, selected, r, itemH, s)
+	u.surface = nil
+}
+
+func (u *ui) drawMenuValue(item menuItem, selected bool, r rl.Rectangle, itemH, s float32) {
+	if item.radio != nil {
+		rh := itemH - 22*s
+		u.drawRadioGroup(item.radio, r.X+r.Width-18*s, r.Y+(itemH-rh)/2, rh, s, selected)
+		return
+	}
+	if item.value != nil {
+		u.drawMenuStepped(item, selected, r, itemH, s)
+	}
+}
+
+func (u *ui) drawMenuStepped(item menuItem, selected bool, r rl.Rectangle, itemH, s float32) {
+	v := item.value()
+	if selected {
+		if item.adjust != nil {
+			v = "<   " + v + "   >"
+		}
+	}
+	m := u.measure(v, 36*s)
+	u.text(v, r.X+r.Width-36*s-m.X, r.Y+(itemH-36*s)/2, 36*s, menuValueColor(u.accent, selected))
+}
+
+func (u *ui) drawGamepads(w, s, margin float32) {
+	u.text("Gamepad info", margin, 190*s, 52*s, rl.ColorAlpha(rl.RayWhite, 0.85))
 	y := 280 * s
 	found := 0
-	for g := int32(0); g < maxGamepads; g++ {
+	for g := range int32(maxGamepads) {
 		if !rl.IsGamepadAvailable(g) {
 			continue
 		}
 		found++
-
-		cardH := 190 * s
-		r := rl.Rectangle{X: margin, Y: y, Width: w - 2*margin, Height: cardH}
-		rl.DrawRectangleRounded(r, 0.12, 10, u.fa(rl.ColorAlpha(rl.White, 0.06)))
-
-		name := rl.GetGamepadName(g)
-		if name == "" {
-			name = "(unnamed)"
-		}
-		u.text(fmt.Sprintf("%d   %s", g, name), r.X+32*s, r.Y+24*s, 40*s, rl.RayWhite)
-
-		axes := rl.GetGamepadAxisCount(g)
-		lx := rl.GetGamepadAxisMovement(g, rl.GamepadAxisLeftX)
-		ly := rl.GetGamepadAxisMovement(g, rl.GamepadAxisLeftY)
-		rx := rl.GetGamepadAxisMovement(g, rl.GamepadAxisRightX)
-		ry := rl.GetGamepadAxisMovement(g, rl.GamepadAxisRightY)
-		lt := rl.GetGamepadAxisMovement(g, rl.GamepadAxisLeftTrigger)
-		rt := rl.GetGamepadAxisMovement(g, rl.GamepadAxisRightTrigger)
-		axesLine := fmt.Sprintf("Axes: %d     Left stick: %+.2f %+.2f     Right stick: %+.2f %+.2f     Triggers: %+.2f %+.2f",
-			axes, lx, ly, rx, ry, lt, rt)
-		u.text(u.fitText(axesLine, 28*s, r.Width-64*s), r.X+32*s, r.Y+84*s, 28*s, rl.ColorAlpha(rl.RayWhite, 0.65))
-
-		var held []string
-		for b := int32(rl.GamepadButtonLeftFaceUp); b <= rl.GamepadButtonRightThumb; b++ {
-			if rl.IsGamepadButtonDown(g, b) {
-				held = append(held, gamepadButtonNames[b])
-			}
-		}
-		heldText := "Buttons held: none"
-		if len(held) > 0 {
-			heldText = "Buttons held: " + strings.Join(held, "  ")
-		}
-		u.text(heldText, r.X+32*s, r.Y+130*s, 28*s, u.accent)
-
-		y += cardH + 24*s
+		y = u.drawGamepadCard(g, margin, y, w, s)
 	}
-
 	if found == 0 {
 		u.text("No gamepads detected", margin, y, 40*s, rl.ColorAlpha(rl.RayWhite, 0.65))
 	}
 }
 
-func clampInt(v, lo, hi int) int {
-	if v < lo {
-		return lo
+func gamepadLabel(g int32) string {
+	name := rl.GetGamepadName(g)
+	if name == "" {
+		return "(unnamed)"
 	}
-	if v > hi {
-		return hi
+	return name
+}
+
+func gamepadAxesLine(g int32) string {
+	return fmt.Sprintf("Axes: %d     Left stick: %+.2f %+.2f     Right stick: %+.2f %+.2f     Triggers: %+.2f %+.2f",
+		rl.GetGamepadAxisCount(g),
+		rl.GetGamepadAxisMovement(g, rl.GamepadAxisLeftX),
+		rl.GetGamepadAxisMovement(g, rl.GamepadAxisLeftY),
+		rl.GetGamepadAxisMovement(g, rl.GamepadAxisRightX),
+		rl.GetGamepadAxisMovement(g, rl.GamepadAxisRightY),
+		rl.GetGamepadAxisMovement(g, rl.GamepadAxisLeftTrigger),
+		rl.GetGamepadAxisMovement(g, rl.GamepadAxisRightTrigger))
+}
+
+func heldGamepadButtons(g int32) []string {
+	var held []string
+	for b := int32(rl.GamepadButtonLeftFaceUp); b <= rl.GamepadButtonRightThumb; b++ {
+		if rl.IsGamepadButtonDown(g, b) {
+			held = append(held, gamepadButtonNames[b])
+		}
 	}
-	return v
+	return held
+}
+
+func gamepadHeldText(g int32) string {
+	held := heldGamepadButtons(g)
+	if len(held) == 0 {
+		return "Buttons held: none"
+	}
+	return "Buttons held: " + strings.Join(held, "  ")
+}
+
+func (u *ui) drawGamepadCard(g int32, margin, y, w, s float32) float32 {
+	cardH := 190 * s
+	r := rl.Rectangle{X: margin, Y: y, Width: w - 2*margin, Height: cardH}
+	rl.DrawRectangleRounded(r, 0.12, 10, u.fa(rl.ColorAlpha(rl.White, 0.06)))
+	u.text(fmt.Sprintf("%d   %s", g, gamepadLabel(g)), r.X+32*s, r.Y+24*s, 40*s, rl.RayWhite)
+	u.text(u.fitText(gamepadAxesLine(g), 28*s, r.Width-64*s), r.X+32*s, r.Y+84*s, 28*s, rl.ColorAlpha(rl.RayWhite, 0.65))
+	u.text(gamepadHeldText(g), r.X+32*s, r.Y+130*s, 28*s, u.accent)
+	return y + cardH + 24*s
+}
+
+func clampInt(v, hi int) int {
+	return min(max(v, 0), hi)
 }

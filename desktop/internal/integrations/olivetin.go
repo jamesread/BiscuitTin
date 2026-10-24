@@ -2,6 +2,7 @@ package integrations
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,8 +18,8 @@ type ArgValue struct {
 }
 
 type olivetinClient struct {
-	base string
 	http *http.Client
+	base string
 }
 
 func newOliveTinClient(url string) *olivetinClient {
@@ -28,43 +29,69 @@ func newOliveTinClient(url string) *olivetinClient {
 	}
 }
 
+type apiResult struct {
+	status string
+	raw    []byte
+	code   int
+}
+
 func (c *olivetinClient) call(method string, req, resp any) error {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return err
 	}
-	r, err := c.http.Post(c.base+"/api/"+method, "application/json", bytes.NewReader(body))
+	res, err := c.postAPI(method, body)
 	if err != nil {
 		return err
 	}
-	defer r.Body.Close()
+	if res.code != http.StatusOK {
+		return fmt.Errorf("%s: %s %s", method, res.status, strings.TrimSpace(string(res.raw)))
+	}
+	return json.Unmarshal(res.raw, resp)
+}
+
+func (c *olivetinClient) postAPI(method string, body []byte) (apiResult, error) {
+	httpReq, err := http.NewRequestWithContext(context.Background(), http.MethodPost, c.base+"/api/"+method, bytes.NewReader(body))
+	if err != nil {
+		return apiResult{}, err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	r, err := c.http.Do(httpReq)
+	if err != nil {
+		return apiResult{}, err
+	}
+	defer func() { _ = r.Body.Close() }()
 	raw, err := io.ReadAll(io.LimitReader(r.Body, 16<<20))
 	if err != nil {
-		return err
+		return apiResult{}, err
 	}
-	if r.StatusCode != http.StatusOK {
-		return fmt.Errorf("%s: %s %s", method, r.Status, strings.TrimSpace(string(raw)))
-	}
-	return json.Unmarshal(raw, resp)
+	return apiResult{raw: raw, status: r.Status, code: r.StatusCode}, nil
 }
 
 type otNode struct {
+	Action   *otRawAct `json:"action"`
 	Title    string    `json:"title"`
 	Type     string    `json:"type"`
 	Contents []otNode  `json:"contents"`
-	Action   *otRawAct `json:"action"`
+}
+
+type otArg struct {
+	Name         string `json:"name"`
+	Type         string `json:"type"`
+	DefaultValue string `json:"defaultValue"`
 }
 
 type otRawAct struct {
-	BindingID string `json:"bindingId"`
-	Title     string `json:"title"`
-	Icon      string `json:"icon"`
-	CanExec   bool   `json:"canExec"`
-	Arguments []struct {
-		Name         string `json:"name"`
-		Type         string `json:"type"`
-		DefaultValue string `json:"defaultValue"`
-	} `json:"arguments"`
+	BindingID string  `json:"bindingId"`
+	Title     string  `json:"title"`
+	Icon      string  `json:"icon"`
+	Arguments []otArg `json:"arguments"`
+	CanExec   bool    `json:"canExec"`
+}
+
+type otCollector struct {
+	seen map[string]bool
+	out  []ListedAction
 }
 
 // ListActions walks every root dashboard and returns the actions the current
@@ -72,56 +99,100 @@ type otRawAct struct {
 // OliveTin has no single "list actions" call, so this mirrors what its web UI
 // shows.
 func (c *olivetinClient) ListActions() ([]ListedAction, error) {
+	roots, err := c.rootDashboards()
+	if err != nil {
+		return nil, err
+	}
+	col := &otCollector{seen: map[string]bool{}}
+	for _, title := range roots {
+		if err := c.collectDashboard(col, title); err != nil {
+			return nil, err
+		}
+	}
+	return col.out, nil
+}
+
+func (c *olivetinClient) rootDashboards() ([]string, error) {
 	var init struct {
 		RootDashboards []string `json:"rootDashboards"`
 	}
 	if err := c.call("Init", struct{}{}, &init); err != nil {
 		return nil, err
 	}
+	return init.RootDashboards, nil
+}
 
-	seen := map[string]bool{}
-	var out []ListedAction
-
-	var walk func(n otNode, group string)
-	walk = func(n otNode, group string) {
-		if n.Type == "fieldset" && n.Title != "" {
-			group = n.Title
-		}
-		if a := n.Action; a != nil && a.BindingID != "" && a.CanExec && !seen[a.BindingID] {
-			seen[a.BindingID] = true
-			act := ListedAction{PinnedAction: PinnedAction{
-				BindingID: a.BindingID,
-				Title:     a.Title,
-				Group:     group,
-				Icon:      iconifyName(a.Icon),
-			}}
-			for _, arg := range a.Arguments {
-				if arg.Type == "confirmation" {
-					act.Args = append(act.Args, ArgValue{Name: arg.Name, Value: "1"})
-					continue
-				}
-				if arg.DefaultValue == "" {
-					act.NeedsInput = true
-				}
-				act.Args = append(act.Args, ArgValue{Name: arg.Name, Value: arg.DefaultValue})
-			}
-			out = append(out, act)
-		}
-		for _, child := range n.Contents {
-			walk(child, group)
-		}
+func (c *olivetinClient) collectDashboard(col *otCollector, title string) error {
+	var resp struct {
+		Dashboard otNode `json:"dashboard"`
 	}
-
-	for _, title := range init.RootDashboards {
-		var resp struct {
-			Dashboard otNode `json:"dashboard"`
-		}
-		if err := c.call("GetDashboard", map[string]string{"title": title}, &resp); err != nil {
-			return nil, fmt.Errorf("dashboard %q: %w", title, err)
-		}
-		walk(resp.Dashboard, title)
+	if err := c.call("GetDashboard", map[string]string{"title": title}, &resp); err != nil {
+		return fmt.Errorf("dashboard %q: %w", title, err)
 	}
-	return out, nil
+	col.walk(resp.Dashboard, title)
+	return nil
+}
+
+func (col *otCollector) walk(n otNode, group string) {
+	group = fieldsetGroup(n, group)
+	col.collectAction(n, group)
+	for _, child := range n.Contents {
+		col.walk(child, group)
+	}
+}
+
+func fieldsetGroup(n otNode, group string) string {
+	if n.Type == "fieldset" && n.Title != "" {
+		return n.Title
+	}
+	return group
+}
+
+func runnableAction(a *otRawAct, seen map[string]bool) bool {
+	if a == nil {
+		return false
+	}
+	if a.BindingID == "" {
+		return false
+	}
+	if !a.CanExec {
+		return false
+	}
+	return !seen[a.BindingID]
+}
+
+func (col *otCollector) collectAction(n otNode, group string) {
+	a := n.Action
+	if !runnableAction(a, col.seen) {
+		return
+	}
+	col.seen[a.BindingID] = true
+	col.out = append(col.out, listedFromRaw(a, group))
+}
+
+func listedFromRaw(a *otRawAct, group string) ListedAction {
+	act := ListedAction{PinnedAction: PinnedAction{
+		BindingID: a.BindingID,
+		Title:     a.Title,
+		Group:     group,
+		Icon:      iconifyName(a.Icon),
+	}}
+	for _, arg := range a.Arguments {
+		act = appendOTArg(act, arg)
+	}
+	return act
+}
+
+func appendOTArg(act ListedAction, arg otArg) ListedAction {
+	if arg.Type == "confirmation" {
+		act.Args = append(act.Args, ArgValue{Name: arg.Name, Value: "1"})
+		return act
+	}
+	if arg.DefaultValue == "" {
+		act.NeedsInput = true
+	}
+	act.Args = append(act.Args, ArgValue{Name: arg.Name, Value: arg.DefaultValue})
+	return act
 }
 
 // Start runs an action and returns its execution tracking ID.

@@ -13,10 +13,12 @@ import (
 const bgFadeSeconds = 1.2
 
 type uiBackground struct {
-	cur, prev         rl.Texture2D
-	curGrid, prevGrid *contrast.LumGrid
-	credit            string
-	fade              float32 // 0..1 progress of the crossfade from prev to cur
+	curGrid  *contrast.LumGrid
+	prevGrid *contrast.LumGrid
+	credit   string
+	cur      rl.Texture2D
+	prev     rl.Texture2D
+	fade     float32
 }
 
 // setBackground uploads a decoded image and starts a crossfade to it.
@@ -49,35 +51,51 @@ func (u *ui) clearBackground() {
 	u.bgTex.fade = 0
 }
 
-func (u *ui) drawBackground(w, h, dt float32) {
+func (u *ui) unloadPrevBackground() {
 	b := &u.bgTex
-	if b.fade < 1 {
-		b.fade += dt / bgFadeSeconds
-		if b.fade >= 1 {
-			b.fade = 1
-			if b.prev.ID != 0 {
-				rl.UnloadTexture(b.prev)
-				b.prev, b.prevGrid = rl.Texture2D{}, nil
-			}
-		}
+	if b.prev.ID == 0 {
+		return
 	}
+	rl.UnloadTexture(b.prev)
+	b.prev, b.prevGrid = rl.Texture2D{}, nil
+}
 
-	if b.prev.ID != 0 {
-		drawCover(b.prev, w, h, 1-b.fade)
+func (u *ui) advanceBgFade(dt float32) {
+	b := &u.bgTex
+	if b.fade >= 1 {
+		return
 	}
-	if b.cur.ID != 0 {
-		drawCover(b.cur, w, h, b.fade)
+	b.fade += dt / bgFadeSeconds
+	if b.fade < 1 {
+		return
 	}
+	b.fade = 1
+	u.unloadPrevBackground()
+}
+
+func (u *ui) drawBgOverlays(w, h float32) {
+	b := &u.bgTex
 	if b.prev.ID == 0 && b.cur.ID == 0 {
 		return
 	}
-
 	o := u.overlays(h)
 	rl.DrawRectangle(0, 0, int32(w), int32(h), rl.ColorAlpha(rl.Black, o.dim))
 	band := int32(o.band)
 	clear := rl.ColorAlpha(rl.Black, 0)
 	rl.DrawRectangleGradientV(0, 0, int32(w), band, rl.ColorAlpha(rl.Black, o.top), clear)
 	rl.DrawRectangleGradientV(0, int32(h)-band, int32(w), band, clear, rl.ColorAlpha(rl.Black, o.bottom))
+}
+
+func (u *ui) drawBackground(w, h, dt float32) {
+	u.advanceBgFade(dt)
+	b := &u.bgTex
+	if b.prev.ID != 0 {
+		drawCover(b.prev, w, h, 1-b.fade)
+	}
+	if b.cur.ID != 0 {
+		drawCover(b.cur, w, h, b.fade)
+	}
+	u.drawBgOverlays(w, h)
 }
 
 // overlayParams describes the black layers drawn over the image: a uniform
@@ -120,32 +138,47 @@ func (o overlayParams) keep(y float32) float64 {
 // backdropFor returns a conservative (brightest) estimate of the colour behind
 // a screen rectangle: the image under it after overlays, or the plain UI
 // background when no image is shown.
-func (u *ui) backdropFor(x0, y0, x1, y1 float32) contrast.RGB {
+func coverScale(tw, th, w, h float32) float32 {
+	k := w / tw
+	if th*k < h {
+		return h / th
+	}
+	return k
+}
+
+func gridSample(g *contrast.LumGrid, w, h, keep, x0, y0, x1, y1 float32) contrast.RGB {
+	tw, th := float32(g.W), float32(g.H)
+	k := coverScale(tw, th, w, h)
+	ox, oy := (tw-w/k)/2, (th-h/k)/2
+	return g.Brightest(float64(ox+x0/k), float64(oy+y0/k), float64(ox+x1/k), float64(oy+y1/k)).Scale(float64(keep))
+}
+
+func brighterGrid(out contrast.RGB, g *contrast.LumGrid, w, h, keep, x0, y0, x1, y1 float32) contrast.RGB {
+	if g == nil {
+		return out
+	}
+	c := gridSample(g, w, h, keep, x0, y0, x1, y1)
+	if contrast.RelativeLuminance(c) > contrast.RelativeLuminance(out) {
+		return c
+	}
+	return out
+}
+
+func (u *ui) brightestBackdrop(out contrast.RGB, x0, y0, x1, y1 float32) contrast.RGB {
 	w := float32(rl.GetScreenWidth())
 	h := float32(rl.GetScreenHeight())
+	o := u.overlays(h)
+	keep := float32(math.Max(o.keep(y0), math.Max(o.keep(y1), o.keep((y0+y1)/2))))
+	for _, g := range []*contrast.LumGrid{u.bgTex.curGrid, u.bgTex.prevGrid} {
+		out = brighterGrid(out, g, w, h, keep, x0, y0, x1, y1)
+	}
+	return out
+}
 
+func (u *ui) backdropFor(x0, y0, x1, y1 float32) contrast.RGB {
 	// Plain background, including the accent glow at the top.
 	out := contrast.RGBOf(u.accent).Over(contrast.RGBOf(u.bg), 0.16)
-
-	o := u.overlays(h)
-	keep := math.Max(o.keep(y0), math.Max(o.keep(y1), o.keep((y0+y1)/2)))
-
-	for _, g := range []*contrast.LumGrid{u.bgTex.curGrid, u.bgTex.prevGrid} {
-		if g == nil {
-			continue
-		}
-		tw, th := float32(g.W), float32(g.H)
-		k := w / tw
-		if th*k < h {
-			k = h / th
-		}
-		ox, oy := (tw-w/k)/2, (th-h/k)/2
-		c := g.Brightest(float64(ox+x0/k), float64(oy+y0/k), float64(ox+x1/k), float64(oy+y1/k)).Scale(keep)
-		if contrast.RelativeLuminance(c) > contrast.RelativeLuminance(out) {
-			out = c
-		}
-	}
-
+	out = u.brightestBackdrop(out, x0, y0, x1, y1)
 	if u.surface != nil {
 		out = u.surface.c.Over(out, u.surface.a)
 	}
@@ -166,10 +199,7 @@ func (u *ui) drawCredit(w, h, s, margin float32) {
 // drawCover scales a texture to fill the screen, cropping the overflow.
 func drawCover(t rl.Texture2D, w, h, alpha float32) {
 	tw, th := float32(t.Width), float32(t.Height)
-	k := w / tw
-	if th*k < h {
-		k = h / th
-	}
+	k := coverScale(tw, th, w, h)
 	sw, sh := w/k, h/k
 	src := rl.Rectangle{X: (tw - sw) / 2, Y: (th - sh) / 2, Width: sw, Height: sh}
 	rl.DrawTexturePro(t, src, rl.Rectangle{Width: w, Height: h}, rl.Vector2{}, 0, rl.ColorAlpha(rl.White, alpha))

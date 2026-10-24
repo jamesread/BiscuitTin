@@ -46,17 +46,17 @@ func Port(cfg config.WebControlConfig) int {
 // Command is input from the web remote, applied on the main thread.
 // Exactly one of the fields is set.
 type Command struct {
-	Button  pb.Button
 	TileKey string
+	Button  pb.Button
 }
 
 // Bridge connects the HTTP handlers (on their own goroutines) to the
 // single-threaded UI: the main loop publishes a state snapshot each frame and
 // drains commands.
 type Bridge struct {
-	mu       sync.Mutex
 	state    *pb.GetStateResponse
 	Commands chan Command
+	mu       sync.Mutex
 }
 
 func NewBridge() *Bridge {
@@ -155,7 +155,7 @@ type Server struct {
 }
 
 func Start(port int, bridge *Bridge) (*Server, error) {
-	ln, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
+	ln, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", fmt.Sprintf("0.0.0.0:%d", port))
 	if err != nil {
 		return nil, err
 	}
@@ -187,9 +187,9 @@ func (wc *Server) URL() string {
 // lanAddress finds the IPv4 address used for the default route. Dialling UDP
 // sends no packets; it only selects a source address.
 func lanAddress() string {
-	conn, err := net.Dial("udp4", "192.0.2.1:9")
+	conn, err := (&net.Dialer{}).DialContext(context.Background(), "udp4", "192.0.2.1:9")
 	if err == nil {
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 		if addr, ok := conn.LocalAddr().(*net.UDPAddr); ok && !addr.IP.IsLoopback() {
 			return addr.IP.String()
 		}

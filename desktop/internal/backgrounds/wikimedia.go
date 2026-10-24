@@ -1,7 +1,7 @@
 package backgrounds
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -95,7 +95,7 @@ func purgeLegacyPOTD(wikiDir, recents string) {
 func (p *wikimediaProvider) Next(size Size) (string, string, error) {
 	var lastErr error
 	cats := p.categories()
-	for i := 0; i < wikimediaTries; i++ {
+	for range wikimediaTries {
 		cat := cats[rand.IntN(len(cats))]
 		path, credit, err := p.fromCategory(cat, size)
 		if err == nil {
@@ -109,26 +109,29 @@ func (p *wikimediaProvider) Next(size Size) (string, string, error) {
 	return "", "", lastErr
 }
 
-func (p *wikimediaProvider) fromCategory(cat string, size Size) (string, string, error) {
-	pages, err := p.categoryPage(cat)
-	if err != nil {
-		return "", "", err
-	}
+func usablePages(pages []commonsPage, size Size) []commonsPage {
 	var usable []commonsPage
 	for _, pg := range pages {
 		if pg.usable(size) {
 			usable = append(usable, pg)
 		}
 	}
+	return usable
+}
+
+func (p *wikimediaProvider) fromCategory(cat string, size Size) (string, string, error) {
+	pages, err := p.categoryPage(cat)
+	if err != nil {
+		return "", "", err
+	}
+	usable := usablePages(pages, size)
 	if len(usable) == 0 {
 		return "", "", errWikimediaSkip
 	}
-	pg := usable[rand.IntN(len(usable))]
-	return p.downloadPage(pg, size)
+	return p.downloadPage(usable[rand.IntN(len(usable))], size)
 }
 
-func (p *wikimediaProvider) downloadPage(pg commonsPage, size Size) (string, string, error) {
-	info := pg.ImageInfo[0]
+func commonsCredit(info commonsInfo) string {
 	credit := "Wikimedia Commons"
 	if a := strings.TrimSpace(htmlTag.ReplaceAllString(info.meta("Artist"), "")); a != "" {
 		credit = a + "  /  " + credit
@@ -136,33 +139,51 @@ func (p *wikimediaProvider) downloadPage(pg commonsPage, size Size) (string, str
 	if l := info.meta("LicenseShortName"); l != "" {
 		credit += "  /  " + l
 	}
+	return credit
+}
 
-	sum := sha1.Sum([]byte(pg.Title))
-	id := hex.EncodeToString(sum[:8])
+func wikiLastErr(err error) error {
+	if err != nil {
+		return err
+	}
+	return errWikimediaSkip
+}
+
+func (p *wikimediaProvider) tryWidth(id string, info commonsInfo, w int, credit string) (string, error) {
+	url, ok := wikimediaURL(info.URL, info.ThumbURL, info.Width, w)
+	if !ok {
+		return "", errWikimediaSkip
+	}
+	path := filepath.Join(p.dir, fmt.Sprintf("%s-%d.jpg", id, w))
+	if err := download(p.client, url, path, credit); err != nil {
+		return "", err
+	}
+	if _, err := decodeRGBA(path); err != nil {
+		_ = os.Remove(path)
+		_ = os.Remove(path + ".credit")
+		return "", err
+	}
+	return path, nil
+}
+
+func (p *wikimediaProvider) downloadWidths(id string, info commonsInfo, size Size, credit string) (string, string, error) {
 	var lastErr error
 	for _, w := range wikimediaThumbWidths(size, info.Width) {
-		url, ok := wikimediaURL(info.URL, info.ThumbURL, info.Width, w)
-		if !ok {
-			lastErr = errWikimediaSkip
-			continue
+		path, err := p.tryWidth(id, info, w, credit)
+		if err == nil {
+			return path, credit, nil
 		}
-		path := filepath.Join(p.dir, fmt.Sprintf("%s-%d.jpg", id, w))
-		if err := download(p.client, url, path, credit); err != nil {
-			lastErr = err
-			continue
-		}
-		if _, err := decodeRGBA(path); err != nil {
-			_ = os.Remove(path)
-			_ = os.Remove(path + ".credit")
-			lastErr = err
-			continue
-		}
-		return path, credit, nil
+		lastErr = err
 	}
-	if lastErr == nil {
-		lastErr = errWikimediaSkip
-	}
-	return "", "", lastErr
+	return "", "", wikiLastErr(lastErr)
+}
+
+func (p *wikimediaProvider) downloadPage(pg commonsPage, size Size) (string, string, error) {
+	info := pg.ImageInfo[0]
+	credit := commonsCredit(info)
+	sum := sha256.Sum256([]byte(pg.Title))
+	id := hex.EncodeToString(sum[:8])
+	return p.downloadWidths(id, info, size, credit)
 }
 
 type commonsQuery struct {
@@ -177,11 +198,11 @@ type commonsPage struct {
 }
 
 type commonsInfo struct {
-	Width    int               `json:"width"`
-	Height   int               `json:"height"`
+	ExtMeta  map[string]extVal `json:"extmetadata"`
 	URL      string            `json:"url"`
 	ThumbURL string            `json:"thumburl"`
-	ExtMeta  map[string]extVal `json:"extmetadata"`
+	Width    int               `json:"width"`
+	Height   int               `json:"height"`
 }
 
 type extVal struct {
@@ -203,12 +224,19 @@ func (info commonsInfo) meta(key string) string {
 	return info.ExtMeta[key].String()
 }
 
+func jpegTitle(title string) bool {
+	lower := strings.ToLower(title)
+	if strings.HasSuffix(lower, ".jpg") {
+		return true
+	}
+	return strings.HasSuffix(lower, ".jpeg")
+}
+
 func (pg commonsPage) usable(size Size) bool {
 	if len(pg.ImageInfo) == 0 {
 		return false
 	}
-	lower := strings.ToLower(pg.Title)
-	if !strings.HasSuffix(lower, ".jpg") && !strings.HasSuffix(lower, ".jpeg") {
+	if !jpegTitle(pg.Title) {
 		return false
 	}
 	info := pg.ImageInfo[0]
@@ -218,35 +246,44 @@ func (pg commonsPage) usable(size Size) bool {
 	return sceneSafe(pg.Title, info.meta("ImageDescription"), info.meta("Categories"), info.meta("ObjectName"))
 }
 
-func (p *wikimediaProvider) categoryPage(cat string) ([]commonsPage, error) {
-	prefix := randomSortPrefix()
-	cache := filepath.Join(p.dir, "lists", safeCacheName(cat)+"-"+prefix+".json")
-
-	raw, err := os.ReadFile(cache)
-	if err != nil {
-		q := url.Values{
-			"action":                {"query"},
-			"format":                {"json"},
-			"generator":             {"categorymembers"},
-			"gcmtitle":              {cat},
-			"gcmtype":               {"file"},
-			"gcmlimit":              {"20"},
-			"gcmstartsortkeyprefix": {prefix},
-			"prop":                  {"imageinfo"},
-			"iiprop":                {"url|size|extmetadata"},
-			"iiurlwidth":            {fmt.Sprintf("%d", bgWidth)},
-		}
-		raw, err = httpGet(p.client, p.apiURL()+"?"+q.Encode(), 4<<20)
-		if err != nil {
-			return nil, err
-		}
-		if err := os.MkdirAll(filepath.Dir(cache), 0o755); err == nil {
-			_ = fsutil.WriteFileAtomic(cache, raw)
-		}
+func (p *wikimediaProvider) fetchCategory(cache, cat, prefix string) ([]byte, error) {
+	q := url.Values{
+		"action":                {"query"},
+		"format":                {"json"},
+		"generator":             {"categorymembers"},
+		"gcmtitle":              {cat},
+		"gcmtype":               {"file"},
+		"gcmlimit":              {"20"},
+		"gcmstartsortkeyprefix": {prefix},
+		"prop":                  {"imageinfo"},
+		"iiprop":                {"url|size|extmetadata"},
+		"iiurlwidth":            {fmt.Sprintf("%d", bgWidth)},
 	}
+	raw, err := httpGet(p.client, p.apiURL()+"?"+q.Encode(), 4<<20)
+	if err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(filepath.Dir(cache), 0o750); err == nil {
+		_ = fsutil.WriteFileAtomic(cache, raw)
+	}
+	return raw, nil
+}
 
+func (p *wikimediaProvider) readOrFetchCategory(cache, cat, prefix string) ([]byte, error) {
+	raw, err := os.ReadFile(cache)
+	if err == nil {
+		return raw, nil
+	}
+	return p.fetchCategory(cache, cat, prefix)
+}
+
+func parseCategoryPages(cache string, raw []byte) ([]commonsPage, error) {
 	doc := &commonsQuery{}
-	if err := json.Unmarshal(raw, doc); err != nil || len(doc.Query.Pages) == 0 {
+	if err := json.Unmarshal(raw, doc); err != nil {
+		_ = os.Remove(cache)
+		return nil, errWikimediaSkip
+	}
+	if len(doc.Query.Pages) == 0 {
 		_ = os.Remove(cache)
 		return nil, errWikimediaSkip
 	}
@@ -257,6 +294,16 @@ func (p *wikimediaProvider) categoryPage(cat string) ([]commonsPage, error) {
 	return pages, nil
 }
 
+func (p *wikimediaProvider) categoryPage(cat string) ([]commonsPage, error) {
+	prefix := randomSortPrefix()
+	cache := filepath.Join(p.dir, "lists", safeCacheName(cat)+"-"+prefix+".json")
+	raw, err := p.readOrFetchCategory(cache, cat, prefix)
+	if err != nil {
+		return nil, err
+	}
+	return parseCategoryPages(cache, raw)
+}
+
 func randomSortPrefix() string {
 	if rand.IntN(6) == 0 {
 		return ""
@@ -264,13 +311,30 @@ func randomSortPrefix() string {
 	return string(rune('A' + rand.IntN(26)))
 }
 
+func isAZ(r rune) bool {
+	return r >= 'a' && r <= 'z'
+}
+
+func isDigit(r rune) bool {
+	return r >= '0' && r <= '9'
+}
+
+func keepCacheRune(r rune) bool {
+	if isAZ(r) {
+		return true
+	}
+	if isDigit(r) {
+		return true
+	}
+	return r == '_'
+}
+
 func safeCacheName(cat string) string {
 	s := strings.ToLower(strings.TrimPrefix(cat, "Category:"))
 	s = strings.ReplaceAll(s, " ", "_")
 	var b strings.Builder
 	for _, r := range s {
-		switch {
-		case r >= 'a' && r <= 'z', r >= '0' && r <= '9', r == '_':
+		if keepCacheRune(r) {
 			b.WriteRune(r)
 		}
 	}
@@ -291,29 +355,45 @@ func wikimediaOrientationOK(imgW, imgH int, size Size) bool {
 }
 
 // wikimediaThumbWidths is the viewport width, then 1920 if that is different.
+func appendWidth(out []int, seen map[int]bool, w int) []int {
+	if w <= 0 {
+		return out
+	}
+	if seen[w] {
+		return out
+	}
+	seen[w] = true
+	return append(out, w)
+}
+
 func wikimediaThumbWidths(size Size, originalW int) []int {
 	size = normalizeSize(size)
 	seen := map[int]bool{}
-	var out []int
-	for _, w := range []int{size.W, bgWidth} {
-		if w <= 0 || seen[w] {
-			continue
-		}
-		seen[w] = true
-		out = append(out, w)
-	}
-	if originalW > 0 && !seen[originalW] {
-		out = append(out, originalW)
-	}
-	return out
+	out := appendWidth(nil, seen, size.W)
+	out = appendWidth(out, seen, bgWidth)
+	return appendWidth(out, seen, originalW)
 }
 
-func wikimediaURL(original, thumb string, originalW, wantW int) (string, bool) {
-	if originalW > 0 && originalW <= wantW {
+func fullSizeOK(originalW, wantW int) bool {
+	if originalW <= 0 {
+		return false
+	}
+	return originalW <= wantW
+}
+
+func thumbOrOriginal(original, thumb string, wantW int) (string, bool) {
+	if thumb == "" {
 		return original, original != ""
 	}
-	if thumb == "" || !wikimediaThumbWidth.MatchString(thumb) {
+	if !wikimediaThumbWidth.MatchString(thumb) {
 		return original, original != ""
 	}
 	return wikimediaThumbWidth.ReplaceAllString(thumb, fmt.Sprintf("/%dpx-$1", wantW)), true
+}
+
+func wikimediaURL(original, thumb string, originalW, wantW int) (string, bool) {
+	if fullSizeOK(originalW, wantW) {
+		return original, original != ""
+	}
+	return thumbOrOriginal(original, thumb, wantW)
 }

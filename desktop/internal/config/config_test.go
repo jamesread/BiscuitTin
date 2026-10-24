@@ -29,7 +29,7 @@ func TestLoadWritesDefaultWhenMissing(t *testing.T) {
 		}
 	}
 
-	if _, err := Load(path); err != nil {
+	if _, err = Load(path); err != nil {
 		t.Fatal(err)
 	}
 	raw2, err := os.ReadFile(path)

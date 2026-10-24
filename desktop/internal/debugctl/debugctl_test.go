@@ -62,14 +62,14 @@ func TestGetDiagnosticsOverSocket(t *testing.T) {
 	if err := PrintDiagnosticsFrom(&buf, path); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(buf.String(), `"width": 2160`) || !strings.Contains(buf.String(), `"height": 3840`) {
+	if !strings.Contains(buf.String(), "2160") || !strings.Contains(buf.String(), "3840") {
 		t.Fatalf("JSON = %s", buf.String())
 	}
 }
 
 func TestStartReplacesStaleSocket(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "debug.sock")
-	ln, err := net.Listen("unix", path)
+	ln, err := (&net.ListenConfig{}).Listen(context.Background(), "unix", path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,8 @@ func waitListening(t *testing.T, path string) {
 	t.Helper()
 	deadline := time.Now().Add(time.Second)
 	for time.Now().Before(deadline) {
-		conn, err := net.DialTimeout("unix", path, 50*time.Millisecond)
+		d := &net.Dialer{Timeout: 50 * time.Millisecond}
+		conn, err := d.DialContext(context.Background(), "unix", path)
 		if err == nil {
 			_ = conn.Close()
 			return

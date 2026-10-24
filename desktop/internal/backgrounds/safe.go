@@ -22,7 +22,7 @@ var unsafeScene = []string{
 // sceneSafe is true when none of the texts look like a person or religious
 // subject. Commons category pulls already prefer landscapes and cities; this
 // is a second pass on the file name and metadata.
-func sceneSafe(texts ...string) bool {
+func joinTexts(texts ...string) string {
 	var b strings.Builder
 	for _, t := range texts {
 		if t == "" {
@@ -33,16 +33,45 @@ func sceneSafe(texts ...string) bool {
 		}
 		b.WriteString(t)
 	}
-	blob := strings.ToLower(b.String())
+	return strings.ToLower(b.String())
+}
+
+func hasUnsafeWord(blob string) bool {
+	for _, w := range unsafeScene {
+		if containsWord(blob, w) {
+			return true
+		}
+	}
+	return false
+}
+
+func sceneSafe(texts ...string) bool {
+	blob := joinTexts(texts...)
 	if blob == "" {
 		return true
 	}
-	for _, w := range unsafeScene {
-		if containsWord(blob, w) {
-			return false
-		}
+	return !hasUnsafeWord(blob)
+}
+
+func wordBoundBefore(blob string, j int) bool {
+	if j == 0 {
+		return true
 	}
-	return true
+	return !isWordChar(rune(blob[j-1]))
+}
+
+func wordBoundAfter(blob string, end int) bool {
+	if end >= len(blob) {
+		return true
+	}
+	return !isWordChar(rune(blob[end]))
+}
+
+func wordMatch(blob string, j, n int) bool {
+	if !wordBoundBefore(blob, j) {
+		return false
+	}
+	return wordBoundAfter(blob, j+n)
 }
 
 func containsWord(blob, word string) bool {
@@ -52,9 +81,7 @@ func containsWord(blob, word string) bool {
 			return false
 		}
 		j += i
-		before := j == 0 || !isWordChar(rune(blob[j-1]))
-		after := j+len(word) >= len(blob) || !isWordChar(rune(blob[j+len(word)]))
-		if before && after {
+		if wordMatch(blob, j, len(word)) {
 			return true
 		}
 		i = j + 1

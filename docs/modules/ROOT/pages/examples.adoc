@@ -1,0 +1,23 @@
+= Config examples
+
+These pages show how to add the tiles from the home screen screenshot.
+Each one is an `entries` item in `~/.config/biscuittin/config.yaml` (or the xref:install.adoc[Flatpak config path]).
+The xref:config.adoc[] lists every key; xref:getting-started.adoc[] is a shorter introduction.
+
+image::screenshots/home.png[Home screen with RetroArch, Steam, Kodi, Jellyfin, YouTube and Spotify]
+
+* xref:examples/retroarch.adoc[RetroArch]
+* xref:examples/steam.adoc[Steam]
+* xref:examples/kodi.adoc[Kodi]
+* xref:examples/jellyfin.adoc[Jellyfin]
+* xref:examples/youtube.adoc[YouTube]
+* xref:examples/spotify.adoc[Spotify]
+
+`command` is a list: the program, then its arguments.
+BiscuitTin runs that command on the host (via `flatpak-spawn --host` when BiscuitTin itself is a Flatpak), so write the command as you would in a terminal on the TV box.
+
+If the *app* is also a Flatpak, the command starts with `flatpak run` and the app id.
+Each page shows both the native binary and the usual Flathub id.
+
+Icons come from the title by default (see xref:icons.adoc[]).
+These six titles match https://thesvg.org[thesvg.org], so they get a glyph without `iconQuery`.

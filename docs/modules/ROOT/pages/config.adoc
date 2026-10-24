@@ -38,6 +38,7 @@ Settings changed on screen are stored separately; see xref:menus.adoc[].
 == Entries
 
 `entries` is a list of tiles, in order.
+Worked examples for the screenshot home screen (RetroArch, Steam, Kodi, Jellyfin, YouTube, Spotify) are under xref:examples.adoc[].
 
 [cols="1,3"]
 |===

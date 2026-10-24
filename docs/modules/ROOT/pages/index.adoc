@@ -23,6 +23,7 @@ image::screenshots/home.png[Home screen]
 
 * xref:install.adoc[Install BiscuitTin]
 * xref:getting-started.adoc[Write your first config]
+* xref:examples.adoc[Config examples] (RetroArch, Steam, Kodi, Jellyfin, YouTube, Spotify)
 
 This documentation site is llm.txt compatible.
 See https://jamesread.github.io/biscuittin/llm.txt[llm.txt] and https://jamesread.github.io/biscuittin/llm-full.txt[llm-full.txt].

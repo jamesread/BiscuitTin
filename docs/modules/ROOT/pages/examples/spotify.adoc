@@ -1,0 +1,34 @@
+= Spotify
+
+https://www.spotify.com/[Spotify]'s desktop client is the last tile on the screenshot home screen.
+
+== Config
+
+[source,yaml]
+----
+entries:
+  - title: Spotify
+    subtitle: Music
+    command: [spotify]
+----
+
+That starts the official Linux client.
+Login and Playlists stay in Spotify's own config.
+
+== If Spotify is a Flatpak
+
+[source,yaml]
+----
+    command: [flatpak, run, com.spotify.Client]
+----
+
+The Flathub id is https://flathub.org/apps/com.spotify.Client[`com.spotify.Client`].
+
+== Notes
+
+* The icon is looked up as `Spotify`.
+* If a Spotify instance is already running, the new command may hand off and exit.
+  Set `restoreOnExit: false` in that case, as with xref:examples/steam.adoc[Steam].
+* The client is a desktop app, not the TV leanback site.
+  For a browser kiosk instead, use the same pattern as xref:examples/youtube.adoc[YouTube] with `https://open.spotify.com`.
+* Output is appended to `~/.cache/biscuittin/spotify.log`.

@@ -1,0 +1,50 @@
+= Jellyfin
+
+This tile starts the https://jellyfin.org/[Jellyfin] *desktop player*, not the server.
+The server is a separate service; the player connects to it.
+This is the fourth tile on the screenshot home screen.
+
+== Config
+
+[source,yaml]
+----
+entries:
+  - title: Jellyfin
+    subtitle: Media server
+    command: [jellyfinmediaplayer]
+----
+
+`jellyfinmediaplayer` is the binary name used by the official https://github.com/jellyfin/jellyfin-media-player[Jellyfin Media Player] packages.
+Some distributions install it as `jellyfin-media-player` instead; use whichever `which` finds on the TV box.
+
+The player remembers the server URL and login in its own config.
+
+== If Jellyfin Media Player is a Flatpak
+
+[source,yaml]
+----
+    command: [flatpak, run, com.github.iwalton3.jellyfin-media-player]
+----
+
+The Flathub id is https://flathub.org/apps/com.github.iwalton3.jellyfin-media-player[`com.github.iwalton3.jellyfin-media-player`].
+
+== Open the web UI instead
+
+If you would rather use the server's browser client (for example there is no desktop player on the box):
+
+[source,yaml]
+----
+  - title: Jellyfin
+    subtitle: Media server
+    command: [firefox, --kiosk, https://jellyfin.example.com]
+    restoreOnExit: false
+----
+
+Use your real server URL.
+`restoreOnExit: false` is the same idea as xref:examples/youtube.adoc[YouTube]: an already running Firefox may take the URL and exit.
+
+== Notes
+
+* The icon is looked up as `Jellyfin`.
+* The desktop player stays running until you quit it, so leave `restoreOnExit` at the default for `jellyfinmediaplayer`.
+* Output is appended to `~/.cache/biscuittin/jellyfin.log`.

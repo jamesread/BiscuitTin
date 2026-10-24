@@ -28,6 +28,7 @@ entries:
 ----
 
 BiscuitTin finds icons for these tiles by their titles (see xref:icons.adoc[]), and adds a *More* tile at the end for menus and settings.
+Ready-made tiles for RetroArch, Steam, Kodi, Jellyfin, YouTube and Spotify are on the xref:examples.adoc[config examples] pages.
 
 == Running it
 

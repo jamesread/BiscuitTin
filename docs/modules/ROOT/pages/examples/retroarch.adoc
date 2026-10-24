@@ -1,0 +1,45 @@
+= RetroArch
+
+https://www.retroarch.com/[RetroArch] is the libretro frontend: consoles, arcade and computers through one gamepad-friendly UI.
+This is the first tile on the screenshot home screen.
+
+== Config
+
+[source,yaml]
+----
+entries:
+  - title: RetroArch
+    subtitle: Retro games
+    command: [retroarch]
+----
+
+That starts the RetroArch menu.
+Cores, playlists and shaders stay in RetroArch's own config (`~/.config/retroarch/`).
+
+To jump straight into a core and a game, add those arguments:
+
+[source,yaml]
+----
+  - title: RetroArch
+    subtitle: Retro games
+    command: [retroarch, -L, /usr/lib64/libretro/snes9x_libretro.so, ~/roms/example.sfc]
+----
+
+Paths are the host's, and may start with `~/` or `$ENV`.
+
+== If RetroArch is a Flatpak
+
+[source,yaml]
+----
+    command: [flatpak, run, org.libretro.RetroArch]
+----
+
+The Flathub id is https://flathub.org/apps/org.libretro.RetroArch[`org.libretro.RetroArch`].
+Give that Flatpak access to your ROM directories if you keep them outside its home.
+
+== Notes
+
+* The icon is looked up as `RetroArch`. Leave `iconQuery` unset unless the tile shows a letter.
+* RetroArch stays running until you quit it, so leave `restoreOnExit` at the default (`true`). The launcher comes back when RetroArch exits, or when you hold Guide.
+* If the window is small on a TV, set fullscreen in RetroArch (*Settings > Video*), or pass `-f`.
+* RetroArch's own log is appended to `~/.cache/biscuittin/retroarch.log` (see `logDir` in the xref:config.adoc[]).

@@ -10,6 +10,14 @@
 ** xref:integrations.adoc[OliveTin and Home Assistant]
 ** xref:web-control.adoc[Web remote]
 * xref:config.adoc[Configuration reference]
+* Config examples
+** xref:examples.adoc[Overview]
+** xref:examples/retroarch.adoc[RetroArch]
+** xref:examples/steam.adoc[Steam]
+** xref:examples/kodi.adoc[Kodi]
+** xref:examples/jellyfin.adoc[Jellyfin]
+** xref:examples/youtube.adoc[YouTube]
+** xref:examples/spotify.adoc[Spotify]
 * xref:troubleshooting.adoc[Troubleshooting and logs]
 * Development
 ** xref:dev/building.adoc[Building from source]

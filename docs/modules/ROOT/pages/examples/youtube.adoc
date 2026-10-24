@@ -1,0 +1,47 @@
+= YouTube
+
+This tile opens YouTube's TV (leanback) site in a kiosk browser window: big tiles, a d-pad, no desktop chrome.
+It is the fifth tile on the screenshot home screen.
+
+== Config
+
+[source,yaml]
+----
+entries:
+  - title: YouTube
+    subtitle: TV
+    command: [firefox, --kiosk, https://www.youtube.com/tv]
+    restoreOnExit: false
+----
+
+`--kiosk` is a full-screen window with no address bar.
+https://www.youtube.com/tv[youtube.com/tv] is the leanback UI meant for televisions.
+
+`restoreOnExit: false` is recommended.
+If Firefox is already running, `firefox <url>` often hands the address to that process and exits, which would otherwise bring the launcher straight back.
+
+Chromium and Chrome accept the same idea:
+
+[source,yaml]
+----
+    command: [chromium-browser, --kiosk, --app=https://www.youtube.com/tv]
+    restoreOnExit: false
+----
+
+== If Firefox is a Flatpak
+
+[source,yaml]
+----
+    command: [flatpak, run, org.mozilla.firefox, --kiosk, https://www.youtube.com/tv]
+    restoreOnExit: false
+----
+
+The Flathub id is https://flathub.org/apps/org.mozilla.firefox[`org.mozilla.firefox`].
+
+== Notes
+
+* The icon is looked up as `YouTube`.
+* Sign-in and cookies stay in the browser profile, not in BiscuitTin.
+* Hold Guide to return to the launcher without closing the browser.
+* To leave kiosk YouTube itself, quit the browser (for example kbd:[Alt+F4] or Firefox's exit), or use the session's usual close shortcut.
+* Output is appended to `~/.cache/biscuittin/youtube.log`.

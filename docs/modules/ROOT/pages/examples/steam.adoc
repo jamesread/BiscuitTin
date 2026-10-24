@@ -1,0 +1,38 @@
+= Steam
+
+https://store.steampowered.com/[Steam] in Big Picture (the controller UI) is the second tile on the screenshot home screen.
+
+== Config
+
+[source,yaml]
+----
+entries:
+  - title: Steam
+    subtitle: Big Picture
+    command: [steam, -gamepadui]
+    restoreOnExit: false
+----
+
+`-gamepadui` is Steam's current Big Picture / Steam Deck UI.
+Older Steam builds used `-bigpicture` instead.
+
+`restoreOnExit: false` is required.
+If Steam is already running, `steam` hands off to that process and exits straight away.
+BiscuitTin would otherwise treat the exit as "Steam closed" and show the home screen again on top of the client.
+Hold Guide to bring the launcher back while Steam is up.
+
+== If Steam is a Flatpak
+
+[source,yaml]
+----
+    command: [flatpak, run, com.valvesoftware.Steam, -gamepadui]
+    restoreOnExit: false
+----
+
+The Flathub id is https://flathub.org/apps/com.valvesoftware.Steam[`com.valvesoftware.Steam`].
+
+== Notes
+
+* The icon is looked up as `Steam`.
+* Steam writes its own logs; BiscuitTin also appends the process output to `~/.cache/biscuittin/steam.log`.
+* A library or a specific game can be started with extra Steam arguments, for example `steam://rungameid/<id>`. Keep `restoreOnExit: false` for those as well.

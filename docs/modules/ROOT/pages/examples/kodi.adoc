@@ -1,0 +1,35 @@
+= Kodi
+
+https://kodi.tv/[Kodi] is the living-room media centre: local files, add-ons and live TV.
+This is the third tile on the screenshot home screen.
+
+== Config
+
+[source,yaml]
+----
+entries:
+  - title: Kodi
+    subtitle: Films and TV
+    command: [kodi]
+----
+
+Kodi opens its own full-screen UI.
+Libraries, add-ons and the web interface stay in Kodi's userdata (`~/.kodi/`).
+
+== If Kodi is a Flatpak
+
+[source,yaml]
+----
+    command: [flatpak, run, tv.kodi.Kodi]
+----
+
+The Flathub id is https://flathub.org/apps/tv.kodi.Kodi[`tv.kodi.Kodi`].
+Give that Flatpak access to your media directories if they live outside its home.
+
+== Notes
+
+* The icon is looked up as `Kodi`.
+* Kodi stays running until you quit it from its menu, so leave `restoreOnExit` at the default.
+* To force full screen from the command: `command: [kodi, --fullscreen]`.
+* Some packages install `kodi-standalone` for a session without a desktop. Use that as the command if that is how you run Kodi on the box.
+* Output is appended to `~/.cache/biscuittin/kodi.log`.

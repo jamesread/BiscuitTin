@@ -1,0 +1,46 @@
+---
+# See https://pre-commit.com. Install the hooks, including the commit
+# message check, with:
+#   pre-commit install --hook-type pre-commit --hook-type commit-msg
+exclude: ^desktop/gen/|^frontend/src/gen/|^docs/theme-supplemental/(css|js)/vendor/
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.2.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        # Generated marketing screenshots of a 1080p window are a few MB.
+        exclude: ^var/marketing/screenshots/.*\.png$
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: ['--fix', 'lf']
+      - id: check-json
+      - id: check-case-conflict
+
+  # Conventional commits drive semantic-release (see .releaserc.yaml).
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: []
+
+  - repo: local
+    hooks:
+      - id: lint
+        name: gofmt and go vet
+        entry: make lint
+        language: system
+        pass_filenames: false
+        files: ^desktop/
+
+      - id: test
+        name: go test
+        entry: make test
+        language: system
+        pass_filenames: false
+        files: ^desktop/

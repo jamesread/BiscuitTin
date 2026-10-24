@@ -1,0 +1,62 @@
+= Commits and releases
+
+== Conventional commits
+
+Commit messages follow https://www.conventionalcommits.org[Conventional Commits], because they decide the next version:
+
+[cols="2,1"]
+|===
+| Prefix | Release
+
+| `feat:` | Minor (`1.2.0` -> `1.3.0`)
+| `fix:`, `perf:` | Patch (`1.2.0` -> `1.2.1`)
+| `docs:`, `style:`, `refactor:`, `test:`, `build:`, `chore:`, `ci:` | None
+| `feat!:`, or a `BREAKING CHANGE:` footer | Major
+|===
+
+----
+feat(backgrounds): add a local image provider
+
+fix(launch): run entries on the host under Flatpak (fixes #12)
+----
+
+Closing keywords such as `fixes #12` in a commit or pull request get a comment on that issue when the fix is released.
+
+== pre-commit
+
+https://pre-commit.com[pre-commit] checks commit messages, whitespace, YAML and JSON, and runs `make lint` and `make test` when Go code changes.
+Install its hooks once per clone:
+
+[source,shell]
+----
+pre-commit install --hook-type pre-commit --hook-type commit-msg
+----
+
+== How a release happens
+
+Every push to `main` runs `.github/workflows/build.yml`:
+
+. *build*: `make build`, `make lint` and `make test`. Pull requests run this too.
+. *package*: https://semantic-release.gitbook.io[semantic-release] reads the commits since the last tag (`.releaserc.yaml`).
+  If any warrant a release, it tags the new version (`1.2.3`, no `v`), creates the GitHub release with notes, and comments on resolved issues and pull requests.
+. semantic-release then runs `goreleaser release` (`.goreleaser.yaml`), which:
+.. builds the frontend,
+.. compiles biscuittin *inside the Freedesktop SDK* (`var/flatpak/go-in-sdk`), so it links against exactly the libraries of the runtime it ships in,
+.. wraps it into `biscuittin_<version>_x86_64.flatpak` with `flatpak-builder` (`var/flatpak/`),
+.. attaches the bundle and its checksum to the release.
+
+The Flatpak is the only download; there are no archives or bare binaries.
+
+Run the workflow by hand (*Actions > Build > Run workflow*) to build a snapshot Flatpak as a workflow artifact, without releasing.
+
+== Building a Flatpak locally
+
+[source,shell]
+----
+make flatpak                            # dist/biscuittin_dev_x86_64.flatpak
+goreleaser release --snapshot --clean   # the release build, without publishing
+----
+
+Both compile in the SDK, and need `flatpak-builder` and, from Flathub, `org.freedesktop.Platform//26.08`, `org.freedesktop.Sdk//26.08` and `org.freedesktop.Sdk.Extension.golang//26.08`.
+
+The docs site is built and published to GitHub Pages by `.github/workflows/docs.yml`.

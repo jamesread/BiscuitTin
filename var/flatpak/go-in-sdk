@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Runs `go` inside the Freedesktop SDK, so the binary links against exactly
+# the libraries of the Flatpak runtime it ships in. GoReleaser uses this as
+# its gobinary; it takes the same arguments as go.
+set -euo pipefail
+
+sdk="${FLATPAK_SDK:-org.freedesktop.Sdk//26.08}"
+
+# flatpak run passes on little of our environment, so forward Go's settings
+# (GOOS, GOARCH, CGO_ENABLED, GOFLAGS, ...) explicitly.
+envs=()
+while IFS='=' read -r name _; do
+	case "$name" in
+	GO* | CGO_*) envs+=("--env=$name=${!name}") ;;
+	esac
+done < <(env)
+
+exec flatpak run --user --filesystem=host --filesystem=/tmp --cwd="$PWD" \
+	--share=network --die-with-parent \
+	"${envs[@]}" --command=/usr/lib/sdk/golang/bin/go "$sdk" "$@"

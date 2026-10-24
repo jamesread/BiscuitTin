@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" version="1.1" id="biscuittin-logo">
+  <title>BiscuitTin</title>
+  <defs>
+    <linearGradient id="biscuitGradient" gradientUnits="userSpaceOnUse" x1="352" y1="40" x2="352" y2="160">
+      <stop offset="0" stop-color="#ffdab6" />
+      <stop offset="1" stop-color="#ffc892" />
+    </linearGradient>
+    <linearGradient id="lidGradient" gradientUnits="userSpaceOnUse" x1="256" y1="160" x2="256" y2="224">
+      <stop offset="0" stop-color="#b8dbff" />
+      <stop offset="1" stop-color="#abd5ff" />
+    </linearGradient>
+    <linearGradient id="tinGradient" gradientUnits="userSpaceOnUse" x1="256" y1="224" x2="256" y2="456">
+      <stop offset="0" stop-color="#c9e4ff" />
+      <stop offset="0.63" stop-color="#b0d7ff" />
+      <stop offset="1" stop-color="#b0d7ff" />
+    </linearGradient>
+    <linearGradient id="padGradient" gradientUnits="userSpaceOnUse" x1="256" y1="256" x2="256" y2="424">
+      <stop offset="0" stop-color="#ffe045" />
+      <stop offset="1" stop-color="#facf00" />
+    </linearGradient>
+    <!-- Only the part of the biscuit above the lid is outlined. -->
+    <clipPath id="aboveLid">
+      <rect x="0" y="0" width="512" height="168" />
+    </clipPath>
+  </defs>
+
+  <!-- Fills -->
+  <path id="biscuit-fill" d="M 352.00,60.00 Q 382.90,40.89 396.67,74.51 Q 432.90,77.22 424.28,112.51 Q 452.00,136.00 424.28,159.49 Q 432.90,194.78 396.67,197.49 Q 382.90,231.11 352.00,212.00 Q 321.10,231.11 307.33,197.49 Q 271.10,194.78 279.72,159.49 Q 252.00,136.00 279.72,112.51 Q 271.10,77.22 307.33,74.51 Q 321.10,40.89 352.00,60.00 Z" style="fill:url(#biscuitGradient);stroke:none" />
+  <path id="tin-fill" d="M 64,224 H 448 V 424 Q 448,456 416,456 H 96 Q 64,456 64,424 Z" style="fill:url(#tinGradient);stroke:none" />
+  <rect id="lid-fill" x="32" y="160" width="448" height="64" rx="16" ry="16" style="fill:url(#lidGradient);stroke:none" />
+  <path id="dpad-fill" d="M 152,276 H 200 V 316 H 240 V 364 H 200 V 404 H 152 V 364 H 112 V 316 H 152 Z" style="fill:url(#padGradient);stroke:none" />
+  <circle id="button-fill-0" cx="336" cy="288" r="24" style="fill:url(#padGradient);stroke:none" />
+  <circle id="button-fill-1" cx="388" cy="340" r="24" style="fill:url(#padGradient);stroke:none" />
+  <circle id="button-fill-2" cx="336" cy="392" r="24" style="fill:url(#padGradient);stroke:none" />
+  <circle id="button-fill-3" cx="284" cy="340" r="24" style="fill:url(#padGradient);stroke:none" />
+  <circle id="biscuit-hole-0" cx="352" cy="104" r="7" style="fill:#000000;stroke:none" />
+  <circle id="biscuit-hole-1" cx="320" cy="80" r="7" style="fill:#000000;stroke:none" />
+  <circle id="biscuit-hole-2" cx="384" cy="80" r="7" style="fill:#000000;stroke:none" />
+  <circle id="biscuit-hole-3" cx="320" cy="128" r="7" style="fill:#000000;stroke:none" />
+  <circle id="biscuit-hole-4" cx="384" cy="128" r="7" style="fill:#000000;stroke:none" />
+
+  <!-- Outlines -->
+  <path id="biscuit-outline" d="M 352.00,60.00 Q 382.90,40.89 396.67,74.51 Q 432.90,77.22 424.28,112.51 Q 452.00,136.00 424.28,159.49 Q 432.90,194.78 396.67,197.49 Q 382.90,231.11 352.00,212.00 Q 321.10,231.11 307.33,197.49 Q 271.10,194.78 279.72,159.49 Q 252.00,136.00 279.72,112.51 Q 271.10,77.22 307.33,74.51 Q 321.10,40.89 352.00,60.00 Z" clip-path="url(#aboveLid)" style="fill:none;stroke:#000000;stroke-width:20.7874;stroke-linecap:butt;stroke-linejoin:bevel;stroke-opacity:1" />
+  <path id="tin-outline" d="M 64,224 V 424 Q 64,456 96,456 H 416 Q 448,456 448,424 V 224" style="fill:none;stroke:#000000;stroke-width:20.7874;stroke-linecap:butt;stroke-linejoin:bevel;stroke-opacity:1" />
+  <rect id="lid-outline" x="32" y="160" width="448" height="64" rx="16" ry="16" style="fill:none;stroke:#000000;stroke-width:20.7874;stroke-linecap:butt;stroke-linejoin:bevel;stroke-opacity:1" />
+  <path id="dpad-outline" d="M 152,276 H 200 V 316 H 240 V 364 H 200 V 404 H 152 V 364 H 112 V 316 H 152 Z" style="fill:none;stroke:#000000;stroke-width:20.7874;stroke-linecap:butt;stroke-linejoin:bevel;stroke-opacity:1" />
+  <circle id="button-outline-0" cx="336" cy="288" r="24" style="fill:none;stroke:#000000;stroke-width:20.7874;stroke-linecap:butt;stroke-linejoin:bevel;stroke-opacity:1" />
+  <circle id="button-outline-1" cx="388" cy="340" r="24" style="fill:none;stroke:#000000;stroke-width:20.7874;stroke-linecap:butt;stroke-linejoin:bevel;stroke-opacity:1" />
+  <circle id="button-outline-2" cx="336" cy="392" r="24" style="fill:none;stroke:#000000;stroke-width:20.7874;stroke-linecap:butt;stroke-linejoin:bevel;stroke-opacity:1" />
+  <circle id="button-outline-3" cx="284" cy="340" r="24" style="fill:none;stroke:#000000;stroke-width:20.7874;stroke-linecap:butt;stroke-linejoin:bevel;stroke-opacity:1" />
+</svg>

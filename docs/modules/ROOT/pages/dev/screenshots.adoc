@@ -1,0 +1,17 @@
+= Marketing screenshots
+
+The screenshots in the README and on this site are generated, never taken by hand:
+
+[source,shell]
+----
+make screenshots
+----
+
+This starts a private Xvfb display of a fixed size, runs biscuittin with fictional config and settings, and drives it with a script of button presses.
+biscuittin saves each PNG from its own window (`-script` with `shot` steps), so images contain only the window, are always exactly the same size, and are pixel-identical between runs.
+The images, `screenshots.ini`, and the generated `screenshot-manifest.yaml` for indexers are in `var/marketing/screenshots/`.
+
+You need Xvfb (`dnf install xorg-x11-server-Xvfb`) and network access for the tile icons.
+
+See `var/marketing/screenshots/README.md` for how to add a screenshot, and the step format in `desktop/internal/app/script.go`.
+`make docs` copies the images into the site.

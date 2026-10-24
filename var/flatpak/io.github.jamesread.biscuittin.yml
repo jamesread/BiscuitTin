@@ -1,0 +1,39 @@
+# Flatpak manifest for biscuittin. It packages a prebuilt binary (from
+# GoReleaser, or `make build`) rather than compiling in the SDK; see Makefile.
+app-id: io.github.jamesread.biscuittin
+runtime: org.freedesktop.Platform
+runtime-version: '26.08'
+sdk: org.freedesktop.Sdk
+command: biscuittin
+finish-args:
+  # raylib draws with OpenGL on X11.
+  - --socket=x11
+  - --share=ipc
+  # GPU, and gamepads under /dev/input.
+  - --device=all
+  # Icons, background images, OliveTin/Home Assistant, and the web remote
+  # (which stays off until switched on in Settings).
+  - --share=network
+  # biscuittin is a launcher: entries run on the host via flatpak-spawn
+  # --host. This lets it run any host command, by design.
+  - --talk-name=org.freedesktop.Flatpak
+modules:
+  - name: biscuittin
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 biscuittin /app/bin/biscuittin
+      - install -Dm644 NotoSans-Bold.ttf /app/share/fonts/biscuittin/NotoSans-Bold.ttf
+      - install -Dm644 OFL.txt /app/share/licenses/biscuittin/NotoSans-OFL.txt
+      - install -Dm644 io.github.jamesread.biscuittin.desktop /app/share/applications/io.github.jamesread.biscuittin.desktop
+      - install -Dm644 io.github.jamesread.biscuittin.metainfo.xml /app/share/metainfo/io.github.jamesread.biscuittin.metainfo.xml
+      - install -Dm644 logo.svg /app/share/icons/hicolor/scalable/apps/io.github.jamesread.biscuittin.svg
+    sources:
+      # Staged into build/ by the Makefile.
+      - type: dir
+        path: build
+      - type: file
+        url: https://github.com/notofonts/notofonts.github.io/raw/42af67ccd12bc0e31ed85384bf73e39248265374/fonts/NotoSans/hinted/ttf/NotoSans-Bold.ttf
+        sha256: 1df075a380fc7cb898acf64c1f7b3b4dd780de3caa860178bf929de35817a913
+      - type: file
+        url: https://raw.githubusercontent.com/notofonts/latin-greek-cyrillic/0ef94805d19e98ed658543a7c48c0a4f19cc0ac0/OFL.txt
+        sha256: cee9892f9f0cc8fe882c9e9537ee6a89621d86ee7ceaf70b02e2b2b1c25c061a

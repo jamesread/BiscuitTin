@@ -1,0 +1,3 @@
+node_modules
+# Copied from var/marketing/screenshots by `make`, so they aren't stored twice.
+modules/ROOT/images/screenshots/

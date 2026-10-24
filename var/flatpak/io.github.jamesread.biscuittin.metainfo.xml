@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.jamesread.biscuittin</id>
+  <name>biscuittin</name>
+  <summary>Full-screen app launcher for TV boxes</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>AGPL-3.0-only</project_license>
+  <developer id="io.github.jamesread">
+    <name>James Read</name>
+  </developer>
+  <description>
+    <p>
+      biscuittin turns a Linux box under the TV into something you can use
+      from the sofa. Games, media apps and home automations are big, readable
+      tiles over a rotating royalty-free photo, picked with a gamepad, a remote
+      control or the arrow keys.
+    </p>
+    <ul>
+      <li>Tiles find their own icons by title</li>
+      <li>Ambient mode shows the photo when nobody is using it</li>
+      <li>Pin OliveTin actions and Home Assistant automations as tiles</li>
+      <li>An optional phone web remote, off until you switch it on</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">io.github.jamesread.biscuittin.desktop</launchable>
+  <url type="homepage">https://github.com/jamesread/biscuittin</url>
+  <url type="help">https://jamesread.github.io/biscuittin</url>
+  <url type="bugtracker">https://github.com/jamesread/biscuittin/issues</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Home screen</caption>
+      <image>https://raw.githubusercontent.com/jamesread/biscuittin/main/var/marketing/screenshots/home.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Ambient background</caption>
+      <image>https://raw.githubusercontent.com/jamesread/biscuittin/main/var/marketing/screenshots/home-idle.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Settings</caption>
+      <image>https://raw.githubusercontent.com/jamesread/biscuittin/main/var/marketing/screenshots/settings.png</image>
+    </screenshot>
+  </screenshots>
+  <content_rating type="oars-1.1"/>
+  <supports>
+    <control>gamepad</control>
+    <control>keyboard</control>
+  </supports>
+  <releases/>
+</component>

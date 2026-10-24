@@ -1,0 +1,56 @@
+# biscuittin config for marketing screenshots. Fictional: the integration
+# URLs are example.com and are never contacted (no screenshot opens their
+# lists), and no entry is ever launched.
+#
+# $MKT_DIR (this directory) is set by the Makefile; caches and logs stay in tmp/.
+
+title: "BiscuitTin on living-room"
+# 6, not 5: with 9 tiles, two rows of 5 overlap the footer at 1080p.
+columns: 6
+background: "#14161f"
+accent: "#f2b134"
+tileColor: "#3d5a80"
+
+# Fixed so every machine renders the same text. `make` checks it exists.
+font: /usr/share/fonts/google-noto/NotoSans-Bold.ttf
+
+cacheDir: $MKT_DIR/tmp/cache
+iconProviders: [thesvg]
+
+# The committed image in seed/backgrounds, not a random download.
+backgrounds:
+  enabled: true
+  providers: [local]
+  dir: $MKT_DIR/seed/backgrounds
+  interval: 86400
+  dim: 0.45
+
+olivetin:
+  url: https://olivetin.example.com
+homeassistant:
+  url: https://homeassistant.example.com
+  token: demo-not-a-real-token
+
+# Idle fade is shown on purpose (back on the home screen), never by timing.
+idleFadeSeconds: 0
+hideOnLaunch: true
+
+entries:
+  - title: RetroArch
+    subtitle: Retro games
+    command: [retroarch]
+  - title: Steam
+    subtitle: Big Picture
+    command: [steam, -gamepadui]
+  - title: Kodi
+    subtitle: Films and TV
+    command: [kodi]
+  - title: Jellyfin
+    subtitle: Media server
+    command: [jellyfinmediaplayer]
+  - title: YouTube
+    subtitle: TV
+    command: [firefox, --kiosk, https://www.youtube.com/tv]
+  - title: Spotify
+    subtitle: Music
+    command: [spotify]

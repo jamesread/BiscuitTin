@@ -1,0 +1,27 @@
+---
+site:
+  title: biscuittin docs
+  url: https://jamesread.github.io/biscuittin
+  start_page: ROOT::index.adoc
+  robots: allow
+content:
+  sources:
+    # HEAD reads the working tree, so screenshots copied in by docs/Makefile
+    # (gitignored) are included.
+    - url: .
+      branches: HEAD
+      start_path: docs
+ui:
+  bundle:
+    url: https://gitlab.com/antora/antora-ui-default/-/jobs/artifacts/HEAD/raw/build/ui-bundle.zip?job=bundle-stable
+    snapshot: true
+  supplemental_files: ./docs/theme-supplemental/
+output:
+  dir: ./build/site
+antora:
+  extensions:
+    - '@antora/lunr-extension'
+    - '@cerbos/antora-llm-generator'
+asciidoc:
+  extensions:
+    - '@asciidoctor/tabs'

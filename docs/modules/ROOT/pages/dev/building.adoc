@@ -1,0 +1,25 @@
+= Building from source
+
+You need Go, gcc, the X11 and OpenGL development headers, and Node.js (for the web remote).
+
+[source,shell]
+----
+git clone https://github.com/jamesread/biscuittin
+cd biscuittin
+make build      # builds frontend/, then desktop/biscuittin
+make test       # go test for every package
+./desktop/biscuittin -windowed -config config.example.yaml
+----
+
+On Fedora the headers come from `libX11-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel mesa-libGL-devel wayland-devel libxkbcommon-devel`.
+
+[cols="1,3"]
+|===
+| Target | What it does
+
+| `make build` | Builds the web remote, then the app into `desktop/biscuittin`.
+| `make test` | Runs the Go tests.
+| `make protocol` | Regenerates the Go and JavaScript code from `protocol/` with buf.
+| `make docs` | Builds this site into `build/site`.
+| `make screenshots` | Regenerates the xref:dev/screenshots.adoc[marketing screenshots].
+|===

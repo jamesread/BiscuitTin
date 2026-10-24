@@ -1,0 +1,24 @@
+= Tile icons
+
+Entries without an `icon` file get one from the `iconProviders` list, searched by the entry's title (or `iconQuery`).
+
+[source,yaml]
+----
+iconProviders: [thesvg]     # the default; [] disables lookups
+
+entries:
+  - title: RetroArch
+    command: [retroarch]
+    # iconQuery: retroarch    # search for this instead of the title
+    # iconStyle: color        # brand colours; default mono (a white glyph)
+    # icon: ~/.config/biscuittin/icons/retroarch.png   # skip lookups
+----
+
+* `thesvg` is https://thesvg.org[thesvg.org]. Only exact slug, title or alias matches are used.
+* `iconify` is the https://iconify.design[Iconify] API, used for OliveTin and Home Assistant icons such as `mdi:lightbulb`.
+
+SVGs are rendered to PNG and cached under `~/.cache/biscuittin/icons/`; no icons are bundled with the app.
+Lookups run in the background, so tiles show their first letter until the icon arrives.
+Unmatched lookups are retried after a day, and the thesvg list is refreshed weekly.
+
+TIP: If a tile shows a letter, thesvg has no exact match for the title. Set `iconQuery`, or point `icon` at a PNG.

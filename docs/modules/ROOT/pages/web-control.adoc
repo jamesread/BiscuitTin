@@ -1,0 +1,32 @@
+= Web remote
+
+biscuittin can serve a touch-friendly remote for your phone: a d-pad, OK and Back, and a button per tile.
+
+IMPORTANT: The web remote has no login.
+Anyone who can reach its port can press buttons and run pinned tiles.
+So it is *off by default*, and only starts when you switch it on.
+Only enable it on a trusted network.
+
+== Turning it on
+
+. Open *More > Settings*.
+. Set *Web control* to *On*. The server starts straight away on `0.0.0.0`.
+. Optionally set *QR code on home screen* to *Shown*, so a phone can scan the address.
+  The QR code only appears while web control is running.
+
+*More > Diagnostics* shows the address.
+Switching web control off stops the server.
+
+== Port
+
+The port is `$PORT` if set, else `webControl.port`, else 8137.
+
+[source,yaml]
+----
+webControl:
+  port: 8137
+----
+
+== API
+
+The page talks to biscuittin over https://connectrpc.com[ConnectRPC] (`protocol/biscuittin/v1/remote.proto`, `RemoteService`), so other clients can use the same API: `GetState`, `PressButton` and `ActivateTile`.

@@ -1,0 +1,68 @@
+= Getting started
+
+biscuittin reads one YAML file: `~/.config/biscuittin/config.yaml`.
+Use `-config <path>` to read another.
+If the file is missing, a default is written there and startup continues.
+https://github.com/jamesread/biscuittin/blob/main/config.example.yaml[config.example.yaml] is a longer commented example; the xref:config.adoc[] lists every key.
+
+== A minimal config
+
+Each entry is one tile.
+`command` is required; everything else is optional.
+
+[source,yaml]
+----
+title: "BiscuitTin on {hostname}"
+
+entries:
+  - title: RetroArch
+    subtitle: Retro games
+    command: [retroarch]
+
+  - title: Steam
+    subtitle: Big Picture
+    command: [steam, -gamepadui]
+    # Steam hands off to an already running client and exits straight away,
+    # so don't treat that exit as "Steam closed".
+    restoreOnExit: false
+----
+
+biscuittin finds icons for these tiles by their titles (see xref:icons.adoc[]), and adds a *More* tile at the end for menus and settings.
+
+== Running it
+
+On the TV box, start biscuittin from your session's autostart (for example an i3 `exec` line, or a desktop autostart entry).
+It opens full screen on the current monitor.
+
+To try it on a desktop first, run it in a window:
+
+[source,shell]
+----
+biscuittin -windowed
+----
+
+[cols="1,3"]
+|===
+| Flag | Meaning
+
+| `-config <path>` | Config file to read. Default `~/.config/biscuittin/config.yaml`.
+| `-windowed` | Run in a 1280x720 window instead of full screen. The window can be resized.
+| `-size WxH` | Run in a window of exactly this size, e.g. `1920x1080`.
+| `-debug` | Log at debug level, including every input action.
+| `-script <file>` | Drive the UI from a file of steps, then quit. Used for xref:dev/screenshots.adoc[screenshots].
+|===
+
+`biscuittin debug` (a subcommand, not `-debug`) prints JSON diagnostics from a running instance.
+See xref:troubleshooting.adoc[].
+
+Quit with kbd:[Esc] on the home screen (it asks first), kbd:[Ctrl+Q], or *More > System > Exit*.
+
+== What happens when you launch a tile
+
+The command starts in its own session, with input from `/dev/null` and output appended to `~/.cache/biscuittin/<title>.log`.
+It keeps running if biscuittin exits or is killed.
+
+With `hideOnLaunch` (the default), the launcher hides while the app runs and comes back when the app exits.
+Set `restoreOnExit: false` on an entry whose command exits straight away.
+Hold the Guide (Xbox) button to bring the launcher back at any time.
+If a command fails within a few seconds, the launcher comes straight back and shows the error.

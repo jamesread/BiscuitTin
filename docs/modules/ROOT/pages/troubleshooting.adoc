@@ -1,0 +1,62 @@
+= Troubleshooting and logs
+
+== Logs
+
+biscuittin logs to standard error, one line per event with a timestamp, level, component and details:
+
+----
+2026-10-24T20:00:15.035+0100  info  app    app/run.go:161      started      {"entries": 6, "config": "config.yaml"}
+2026-10-24T20:00:15.486+0100  info  icons  icons/icons.go:164  icon cached  {"provider": "thesvg", "query": "RetroArch", ...}
+----
+
+Start it with `-debug` to also log every input action and changes of primary input device.
+
+Each launched app's own output goes to `~/.cache/biscuittin/<title>.log` (see `logDir` in the xref:config.adoc[]).
+
+== Diagnostics
+
+*More > Diagnostics* shows the version, display size and refresh rate, connected gamepads, the primary input, uptime, the config, settings and cache paths, the integration addresses, the web remote's address, the local debug socket, and RSS feed status.
+
+== Inspecting a running instance
+
+A read-only debug socket is always on at `$XDG_RUNTIME_DIR/biscuittin/debug.sock` (or `$TMPDIR/biscuittin-$UID/debug.sock`).
+It is a unix socket, mode `0600`, not a network listener, and it cannot press buttons or launch tiles.
+
+[source,shell]
+----
+biscuittin debug
+----
+
+That prints JSON: window size, monitors, the current screen, paths, and the same facts as *More > Diagnostics*.
+`-debug` is a different thing: it only raises the log level.
+
+The same RPC is available over Connect (`protocol/biscuittin/v1/debug.proto`, `DebugService.GetDiagnostics`):
+
+[source,shell]
+----
+curl --unix-socket "$XDG_RUNTIME_DIR/biscuittin/debug.sock" \
+  -H 'Content-Type: application/json' -d '{}' \
+  http://localhost/biscuittin.v1.DebugService/GetDiagnostics
+----
+
+If no instance is running, `biscuittin debug` exits non-zero.
+
+== Common problems
+
+A tile shows a letter instead of an icon::
+thesvg has no exact match for the title, or the icon is still downloading.
+Set `iconQuery`, or `icon` to a PNG. See xref:icons.adoc[].
+
+The launcher doesn't come back after an app exits::
+The command handed off to an already running instance and exited straight away, before the app closed.
+Set `restoreOnExit: false` on that entry, and hold Guide to bring the launcher back.
+
+"Web control could not start"::
+Another program is using the port. Set `webControl.port` or `$PORT`. See xref:web-control.adoc[].
+
+Home Assistant says "no access token"::
+Put a long-lived access token in `~/.config/biscuittin/homeassistant.token`. See xref:integrations.adoc[].
+
+No background images::
+Both providers need the internet. The last 5 shown images are reused at startup, and each provider's download cache is reused when offline, so there are none on a fresh install without a network.
+Use the `local` provider for your own images.

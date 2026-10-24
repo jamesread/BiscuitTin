@@ -1,0 +1,41 @@
+= Code layout
+
+The repository holds the desktop app, the web remote that it embeds, the API between them, and these docs.
+
+----
+desktop/            the Go app (its own Go module)
+  cmd/biscuittin/   main: flags, logging, then app.Run
+  internal/
+    app/            the launcher: window, tiles, menus, input, main loop, -script
+    backgrounds/    background image providers and fetcher
+    config/         the YAML config file
+    contrast/       colour maths that keeps text readable
+    debugctl/       local unix-socket DebugService
+    fsutil/         small file helpers
+    icons/          icon providers, SVG rendering and cache
+    installationinfo/  build version, commit and date
+    integrations/   OliveTin and Home Assistant
+    launch/         starts entries as detached processes
+    rss/            RSS and Atom fetch, parse and cache
+    settings/       choices made on screen, saved to settings.yaml
+    webcontrol/     web remote server and ConnectRPC API (embeds webdist/)
+  gen/              generated from protocol/
+frontend/           web remote (Vue), built into desktop/internal/webcontrol/webdist
+protocol/           protobuf API for the web remote and the local debug socket
+docs/               this site (Antora)
+var/marketing/      screenshot pipeline
+----
+
+This follows the Go project's https://go.dev/doc/modules/layout[module layout] for a command with supporting packages: `main` under `cmd/`, and everything else under `internal/`, so it can't be imported from outside the module.
+
+`internal/app` is one package because its files share the launcher's UI state.
+The other packages don't depend on it, and talk to it through channels and plain types (for example `integrations.Event`, `icons.Result` and `webcontrol.Command`).
+
+Logging uses https://pkg.go.dev/go.uber.org/zap[zap].
+`main` installs the global logger, and each package logs through a named logger.
+
+== Secure by default
+
+Anything that listens on the network or exposes an address (like the web remote and its QR code) must stay off until the user deliberately switches it on.
+Tests in `internal/settings` and `internal/app` pin these defaults.
+The local debug socket (`$XDG_RUNTIME_DIR/biscuittin/debug.sock`) is not a network listener: it is always on, mode `0600`, and only answers `GetDiagnostics`.

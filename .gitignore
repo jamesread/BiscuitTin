@@ -1,0 +1,36 @@
+# Local machine config and secrets — never the live box config
+/config.yaml
+*.token
+.env
+.env.*
+*.pem
+id_rsa
+id_ed25519
+
+# Binaries and build output
+/desktop/biscuittin
+*.test
+*.exe
+/build/
+/dist/
+desktop/tmp/
+frontend/dist/
+var/flatpak/build/
+var/flatpak/tmp/
+var/flatpak/.flatpak-builder/
+var/marketing/screenshots/tmp/
+
+# Dependencies (frontend and docs)
+node_modules/
+
+# Embedded web remote build (keep the placeholder)
+desktop/internal/webcontrol/webdist/*
+!desktop/internal/webcontrol/webdist/.gitkeep
+
+# Editor / OS
+.DS_Store
+*~
+*.swp
+*.orig
+.idea/
+.vscode/

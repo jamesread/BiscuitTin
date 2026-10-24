@@ -1,0 +1,51 @@
+---
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# Releases ship only as a Flatpak bundle. semantic-release creates the tag
+# and the GitHub release (with notes), then runs `goreleaser release` to
+# attach the bundle (see .releaserc.yaml).
+version: 2
+project_name: biscuittin
+
+before:
+  hooks:
+    - make frontend
+
+builds:
+  - id: biscuittin
+    dir: desktop
+    main: ./cmd/biscuittin
+    binary: biscuittin
+    # Compiled inside the Flatpak SDK, so it matches the runtime's libraries.
+    tool: '{{ .Env.PWD }}/var/flatpak/go-in-sdk'
+    env:
+      - CGO_ENABLED=1
+    goos: [linux]
+    goarch: [amd64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version={{ .Version }} -X main.commit={{ .ShortCommit }} -X main.date={{ .CommitDate }}
+    hooks:
+      post:
+        - cmd: make -C var/flatpak bundle BINARY={{ .Path }} VERSION={{ .Version }} ARCH=x86_64 OUT={{ .Env.PWD }}/dist/biscuittin_{{ .Version }}_x86_64.flatpak
+          dir: '{{ .Env.PWD }}'
+          output: true
+
+# No archives or bare binaries: the Flatpak is the only download.
+archives:
+  - formats: [binary]
+    name_template: 'biscuittin_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+
+checksum:
+  ids: [none]
+  extra_files:
+    - glob: ./dist/*.flatpak
+
+release:
+  ids: [none]
+  # semantic-release has already created the release and its notes.
+  mode: keep-existing
+  extra_files:
+    - glob: ./dist/*.flatpak
+
+changelog:
+  disable: true

@@ -1,0 +1,28 @@
+= biscuittin
+
+*A full-screen app launcher for TV boxes, driven by a gamepad, a remote control or the arrow keys.*
+
+biscuittin turns a Linux box under the TV into something you can use from the sofa.
+Your games, media apps and home automations are big, readable tiles over a rotating royalty-free photo.
+Pick one with a d-pad and press A.
+It is rendered with OpenGL (via https://github.com/gen2brain/raylib-go[raylib-go]) and configured with one YAML file.
+
+image::screenshots/home.png[Home screen]
+
+== Highlights
+
+* *Built for a TV and a controller.* Big tiles, a clock, and control hints that match whatever you last used: Xbox or PlayStation button glyphs, or keyboard keys.
+* *Launches anything.* Each tile runs a command, detached from biscuittin, and the launcher hides while the app is in front. Hold the Guide button to bring it back.
+* *Icons without the hassle.* Tiles find their own icons from https://thesvg.org[thesvg.org] by title.
+* *Ambient mode.* When nobody is using it, the tiles fade away to show the photo. See xref:backgrounds.adoc[].
+* *Home automation tiles.* Pin xref:integrations.adoc[OliveTin actions and Home Assistant automations] as tiles.
+* *Readable everywhere.* Text is checked against the photo behind it and given a backing where needed, to meet WCAG AA contrast.
+* *Secure by default.* The phone xref:web-control.adoc[web remote] has no login, so it stays off until you switch it on.
+
+== Next steps
+
+* xref:install.adoc[Install biscuittin]
+* xref:getting-started.adoc[Write your first config]
+
+This documentation site is llm.txt compatible.
+See https://jamesread.github.io/biscuittin/llm.txt[llm.txt] and https://jamesread.github.io/biscuittin/llm-full.txt[llm-full.txt].

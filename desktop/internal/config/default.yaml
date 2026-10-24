@@ -1,0 +1,51 @@
+# biscuittin config. Default location: ~/.config/biscuittin/config.yaml
+# (override with -config <path>). Written on first start if the file is missing.
+
+# {hostname} is replaced with the short host name, e.g. "BiscuitTin on queen".
+title: "BiscuitTin on {hostname}"
+
+# Full screen on the current monitor. Use -windowed for testing on a desktop.
+fullscreen: true
+
+# Tiles per row before wrapping.
+columns: 5
+
+# Colours are #rrggbb.
+background: "#14161f"
+accent: "#f2b134"
+
+# Fill for every tile. Darkened automatically if needed so the white icons and
+# letters on it meet WCAG AA contrast (4.5:1).
+tileColor: "#3d5a80"
+
+# Royalty-free background images, shown in rotation. On/off and the interval
+# can also be changed from More on screen.
+backgrounds:
+  enabled: true
+  providers: [wikimedia, picsum]
+  interval: 60   # seconds, 60 (1 minute) to 86400 (1 day)
+  dim: 0.45      # darken images so text stays readable, 0 to 1
+
+# RSS / Atom headlines on the idle home screen. Leave feeds empty (or omit
+# this block) to keep idle as the photo only.
+# rss:
+#   feeds:
+#     - https://feeds.bbci.co.uk/news/rss.xml
+
+# OliveTin / Home Assistant: set a url to list actions under More > Integrations.
+# olivetin:
+#   url: https://olivetin.example
+# homeassistant:
+#   url: http://homeassistant.local:8123
+
+entries:
+  - title: RetroArch
+    subtitle: Retro games
+    command: [retroarch]
+
+  - title: Steam
+    subtitle: Big Picture
+    command: [steam, -gamepadui]
+    # When the Steam client is already running, `steam` hands off to it and
+    # exits straight away, so don't treat that exit as "Steam closed".
+    restoreOnExit: false

@@ -1,0 +1,15 @@
+---
+# semantic-release: conventional commits on main decide the next version,
+# then it tags, creates the GitHub release (with notes, and comments on the
+# issues and PRs it resolves), and runs GoReleaser to attach the Flatpak.
+branches:
+  - main
+plugins:
+  - '@semantic-release/commit-analyzer'
+  - '@semantic-release/release-notes-generator'
+  - '@semantic-release/github'
+  - - '@semantic-release/exec'
+    - publishCmd: |
+        goreleaser release --clean
+
+tagFormat: '${version}'

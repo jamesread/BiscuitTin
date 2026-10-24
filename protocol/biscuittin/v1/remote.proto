@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package biscuittin.v1;
+
+option go_package = "github.com/jamesread/biscuittin/gen/biscuittin/v1;biscuittinv1";
+
+// RemoteService lets a phone or tablet drive biscuittin like a gamepad, over
+// the "web control" server (More > Settings > Web control).
+service RemoteService {
+  // GetState returns what is on screen, so the remote can show the tiles and
+  // which one is selected.
+  rpc GetState(GetStateRequest) returns (GetStateResponse);
+
+  // PressButton sends one button press, exactly as if it came from a gamepad
+  // or keyboard on the TV.
+  rpc PressButton(PressButtonRequest) returns (PressButtonResponse);
+
+  // ActivateTile selects a home screen tile and activates it (launching an
+  // app, running a pinned action, or opening More).
+  rpc ActivateTile(ActivateTileRequest) returns (ActivateTileResponse);
+}
+
+// Button is a remote control button.
+enum Button {
+  BUTTON_UNSPECIFIED = 0;
+  BUTTON_UP = 1;
+  BUTTON_DOWN = 2;
+  BUTTON_LEFT = 3;
+  BUTTON_RIGHT = 4;
+  // BUTTON_SELECT is A / Enter.
+  BUTTON_SELECT = 5;
+  // BUTTON_BACK is B / Esc.
+  BUTTON_BACK = 6;
+}
+
+message GetStateRequest {}
+
+// Tile is a home screen tile.
+message Tile {
+  // key identifies the tile for ActivateTile.
+  string key = 1;
+  string title = 2;
+  string subtitle = 3;
+  bool selected = 4;
+  // running is true while a launched app or pinned action is in progress.
+  bool running = 5;
+}
+
+message GetStateResponse {
+  // title is the launcher title, e.g. "BiscuitTin on queen".
+  string title = 1;
+  repeated Tile tiles = 2;
+  // screen names the current screen, e.g. "home", "more", "settings".
+  string screen = 3;
+  // hidden is true while biscuittin is hidden behind a launched app.
+  bool hidden = 4;
+  // message is the current status message, if any (e.g. "Launching Steam...").
+  string message = 5;
+}
+
+message PressButtonRequest {
+  Button button = 1;
+}
+
+message PressButtonResponse {}
+
+message ActivateTileRequest {
+  string key = 1;
+}
+
+message ActivateTileResponse {}

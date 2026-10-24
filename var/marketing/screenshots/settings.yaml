@@ -1,0 +1,19 @@
+# Seed for ~/.local/state/biscuittin/settings.yaml (fictional pins). Copied
+# into tmp/state on every run, so captures never see your own settings.
+backgroundsEnabled: true
+backgroundInterval: 86400
+hideAttribution: false
+hideHelp: false
+webControl: false
+showQR: false
+pinnedActions:
+  - source: olivetin
+    bindingId: demo-backup-photos
+    title: Back up photos
+    group: Home server
+    icon: mdi:cloud-upload
+  - source: homeassistant
+    bindingId: automation.demo_movie_lighting
+    title: Movie lighting
+    group: Home Assistant
+    icon: mdi:movie-open

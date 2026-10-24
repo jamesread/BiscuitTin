@@ -1,0 +1,95 @@
+= Configuration reference
+
+biscuittin reads `~/.config/biscuittin/config.yaml` (or `$XDG_CONFIG_HOME/biscuittin/config.yaml`), or the file given with `-config`.
+If that file is missing, a default is written and startup continues.
+https://github.com/jamesread/biscuittin/blob/main/config.example.yaml[config.example.yaml] is a commented example.
+
+Paths may start with `~/` and may use `$ENV` variables.
+Settings changed on screen are stored separately; see xref:menus.adoc[].
+
+== Appearance
+
+[cols="1,1,3"]
+|===
+| Key | Default | Meaning
+
+| `title` | `BiscuitTin on \{hostname}` | Shown top left. `\{hostname}` is replaced with the short host name.
+| `fullscreen` | `true` | Full screen on the current monitor. `-windowed` and `-size` override it.
+| `columns` | `5` | Tiles per row before wrapping.
+| `background` | `#14161f` | Background colour, `#rrggbb`.
+| `accent` | `#f2b134` | Selection and highlight colour.
+| `tileColor` | `#3d5a80` | Tile fill. Darkened automatically if needed, so white icons and letters on it meet WCAG AA contrast (4.5:1).
+| `font` | Noto Sans Bold or DejaVu Sans Bold | A TTF font file.
+| `idleFadeSeconds` | `20` | Fade the tiles out after this many seconds without input, while a background image or RSS headlines can be shown. `0` disables.
+|===
+
+== Launching
+
+[cols="1,1,3"]
+|===
+| Key | Default | Meaning
+
+| `hideOnLaunch` | `true` | Hide the launcher while a launched app runs.
+| `restoreHoldSeconds` | `1.0` | How long to hold Guide to bring the launcher back.
+| `logDir` | `cacheDir` | Launched apps write their output to `<logDir>/<entry title>.log`.
+| `cacheDir` | `~/.cache/biscuittin` | Downloaded and rendered icons and images.
+|===
+
+== Entries
+
+`entries` is a list of tiles, in order.
+
+[cols="1,3"]
+|===
+| Key | Meaning
+
+| `title` | Tile label, and the default icon search.
+| `subtitle` | Shown under the selected tile.
+| `command` | *Required.* The command and its arguments, as a list.
+| `workdir` | Working directory.
+| `env` | Extra environment variables, as a map. Values may use `$VAR`.
+| `icon` | A PNG to use, skipping icon lookups.
+| `iconQuery` | Icon search term, if not the title.
+| `iconStyle` | `mono` (a white glyph, the default) or `color` (brand colours).
+| `restoreOnExit` | Default `true`. Set `false` for commands that hand off to a running instance and exit straight away.
+|===
+
+== Icons and backgrounds
+
+[cols="1,1,3"]
+|===
+| Key | Default | Meaning
+
+| `iconProviders` | `[thesvg]` | Where to look up icons, in order. `[]` disables lookups. See xref:icons.adoc[].
+| `backgrounds.enabled` | `true` | Show background images. The on-screen setting takes precedence.
+| `backgrounds.providers` | `[wikimedia, picsum]` | `wikimedia`, `picsum` and `local`. See xref:backgrounds.adoc[].
+| `backgrounds.dir` | | Image directory for the `local` provider.
+| `backgrounds.interval` | `60` | Seconds between images, 60 to 86400.
+| `backgrounds.dim` | `0.45` | Darken images so text stays readable, 0 to 1.
+|===
+
+== Integrations and web remote
+
+[cols="1,1,3"]
+|===
+| Key | Default | Meaning
+
+| `olivetin.url` | | OliveTin server. See xref:integrations.adoc[].
+| `homeassistant.url` | | Home Assistant server.
+| `homeassistant.tokenFile` | `~/.config/biscuittin/homeassistant.token` | File holding a long-lived access token.
+| `homeassistant.token` | | The token itself. Prefer `tokenFile`.
+| `webControl.port` | `8137` | Web remote port, unless `$PORT` is set. The remote itself is switched on in Settings. See xref:web-control.adoc[].
+|===
+
+== RSS headlines
+
+Shown on the idle home screen. See xref:rss.adoc[].
+
+[cols="1,1,3"]
+|===
+| Key | Default | Meaning
+
+| `rss.feeds` | | RSS or Atom URLs. Each item is a URL string or `{url, name}`.
+| `rss.interval` | `900` | Seconds between feed refreshes, 60 to 86400.
+| `rss.rotateSeconds` | `60` | Seconds each article stays on screen, 60 to 86400. The on-screen setting takes precedence.
+|===

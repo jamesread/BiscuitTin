@@ -1,0 +1,12 @@
+version: v2
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: ../desktop/gen/
+    opt: paths=source_relative
+
+  - remote: buf.build/connectrpc/go:v1.19.1
+    out: ../desktop/gen/
+    opt: paths=source_relative
+
+  - remote: buf.build/bufbuild/es
+    out: ../frontend/src/gen/

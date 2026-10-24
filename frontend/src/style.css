@@ -1,0 +1,50 @@
+/* Large, thumb-sized targets; everything else comes from femtocrank. */
+.dpad {
+	display: grid;
+	grid-template-areas: ". up ." "left select right" ". down .";
+	grid-template-columns: repeat(3, 1fr);
+	gap: 0.5em;
+	max-width: 22em;
+	margin: 0 auto 1em;
+}
+
+.dpad button,
+.back {
+	min-height: 4.5em;
+	font-size: 1.4em;
+	touch-action: manipulation;
+}
+
+.dpad .up { grid-area: up; }
+.dpad .down { grid-area: down; }
+.dpad .left { grid-area: left; }
+.dpad .right { grid-area: right; }
+.dpad .select { grid-area: select; }
+
+.back {
+	display: block;
+	width: 100%;
+	max-width: 22em;
+	margin: 0 auto;
+}
+
+.tiles {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(9em, 1fr));
+	gap: 0.5em;
+}
+
+.tiles button {
+	display: flex;
+	flex-direction: column;
+	min-height: 4.5em;
+	touch-action: manipulation;
+}
+
+.tiles button.selected {
+	outline: 3px solid currentColor;
+}
+
+.status .error {
+	color: var(--error-color, #ff6e64);
+}

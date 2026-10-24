@@ -1,0 +1,35 @@
+= Controls
+
+biscuittin works with a gamepad, a remote control (most present themselves as a keyboard) or a keyboard.
+
+[cols="2,3"]
+|===
+| Input | Action
+
+| D-pad, left stick, arrow keys or WASD | Move. Hold to repeat.
+| A, Start, kbd:[Enter] or kbd:[Space] | Launch, or select in menus.
+| B or kbd:[Backspace] | Back. On the home screen, hide the tiles.
+| kbd:[Esc] | Back in menus. On the home screen, ask to exit.
+| Hold Guide (Xbox button) | Bring the launcher back while an app is running.
+| kbd:[Ctrl+Q] or *More > System > Exit* | Quit without asking.
+|===
+
+== Control help
+
+The footer shows the controls for the screen you are on, for your _primary_ input device: whichever you used last, or the gamepad if one is connected at startup.
+Gamepad hints use button glyphs matched to the controller: Xbox-style, or PlayStation when the controller's name says so.
+Keyboard and remote hints show keycaps.
+
+Hide the hints with *More > Settings > Control help*.
+*More > Diagnostics* shows which device is primary, and *More > Gamepad info* shows each connected gamepad's buttons and sticks live.
+
+== Idle and hiding the tiles
+
+While a background image is showing, or RSS feeds have articles, the tiles, menus and hints fade out after `idleFadeSeconds` (default 20) without input, so the photo can be enjoyed.
+The title, clock and photo credit stay.
+Configured xref:rss.adoc[RSS headlines] fade in on the home screen in their place.
+Pressing B or Backspace on the home screen hides the tiles straight away.
+kbd:[Esc] on the home screen asks whether to exit.
+
+Any key, button or stick movement brings them back within a fifth of a second.
+That first input only wakes the screen; it doesn't also move or launch anything.

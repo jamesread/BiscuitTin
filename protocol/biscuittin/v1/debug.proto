@@ -1,0 +1,101 @@
+syntax = "proto3";
+
+package biscuittin.v1;
+
+option go_package = "github.com/jamesread/biscuittin/gen/biscuittin/v1;biscuittinv1";
+
+// DebugService is a local, read-only inspect API served on a unix socket.
+// It is not the web remote: it does not accept button presses or launches.
+service DebugService {
+  // GetDiagnostics returns the facts shown on More > Diagnostics, plus
+  // window and monitor sizes.
+  rpc GetDiagnostics(GetDiagnosticsRequest) returns (GetDiagnosticsResponse);
+}
+
+// GetDiagnosticsRequest is empty; the running instance has one snapshot.
+message GetDiagnosticsRequest {}
+
+// GetDiagnosticsResponse is a point-in-time view of the running launcher.
+message GetDiagnosticsResponse {
+  // version is the build version, e.g. "dev" or a git tag.
+  string version = 1;
+  // commit is the short git commit the binary was built from.
+  string commit = 2;
+  // build_date is when the binary was built.
+  string build_date = 3;
+  // go_runtime is the Go version and GOOS/GOARCH, e.g. "go1.26.9  linux/amd64".
+  string go_runtime = 4;
+  // host is the machine hostname.
+  string host = 5;
+  // pid is the launcher process id.
+  int32 pid = 6;
+  // uptime is how long this process has been running, as a duration string.
+  string uptime = 7;
+
+  // config_path is the YAML config file in use.
+  string config_path = 8;
+  // settings_path is the on-screen settings file.
+  string settings_path = 9;
+  // cache_dir holds downloaded icons and background images.
+  string cache_dir = 10;
+  // socket_path is this debug socket, so clients and Diagnostics agree.
+  string socket_path = 11;
+
+  // window is the launcher window.
+  Window window = 12;
+  // display is the current monitor and every connected monitor.
+  Display display = 13;
+
+  // screen names the current UI, e.g. "home", "more", "settings".
+  string screen = 14;
+  // selected_tile is the key of the highlighted home-screen tile.
+  string selected_tile = 15;
+  // message is the current toast, if any.
+  string message = 16;
+
+  // gamepad_count is how many gamepads raylib currently sees.
+  int32 gamepad_count = 17;
+  // primary_input names the device driving the UI.
+  string primary_input = 18;
+
+  // olivetin is the configured OliveTin URL, empty if unset.
+  string olivetin = 19;
+  // home_assistant is the configured Home Assistant URL, empty if unset.
+  string home_assistant = 20;
+  // web_control is the web remote URL, or "off".
+  string web_control = 21;
+}
+
+// Window is the launcher window's size and visibility.
+message Window {
+  // width is the window width in pixels.
+  int32 width = 1;
+  // height is the window height in pixels.
+  int32 height = 2;
+  // fullscreen is true in borderless full screen.
+  bool fullscreen = 3;
+  // hidden is true while the launcher is unmapped behind a launched app.
+  bool hidden = 4;
+}
+
+// Display is the current monitor and the full list reported by raylib.
+message Display {
+  // current_index is raylib's current monitor number.
+  int32 current_index = 1;
+  // refresh_hz is the current monitor's refresh rate.
+  int32 refresh_hz = 2;
+  // monitors is every connected monitor.
+  repeated Monitor monitors = 3;
+}
+
+// Monitor is one display as raylib reports it.
+message Monitor {
+  // index is the raylib monitor number.
+  int32 index = 1;
+  // width is the monitor width in pixels.
+  int32 width = 2;
+  // height is the monitor height in pixels.
+  int32 height = 3;
+  // name is the monitor name, if the display server provides one.
+  string name = 4;
+}

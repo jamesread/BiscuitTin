@@ -1,0 +1,112 @@
+# biscuittin config. Default location: ~/.config/biscuittin/config.yaml
+# (override with -config <path>).
+
+# {hostname} is replaced with the short host name, e.g. "BiscuitTin on queen".
+title: "BiscuitTin on {hostname}"
+
+# Full screen on the current monitor. Use -windowed for testing on a desktop.
+fullscreen: true
+
+# Tiles per row before wrapping.
+columns: 5
+
+# Colours are #rrggbb.
+background: "#14161f"
+accent: "#f2b134"
+
+# Fill for every tile. Darkened automatically if needed so the white icons and
+# letters on it meet WCAG AA contrast (4.5:1).
+tileColor: "#3d5a80"
+
+# TTF font. Defaults to Noto Sans Bold / DejaVu Sans Bold if installed.
+# font: /usr/share/fonts/google-noto/NotoSans-Bold.ttf
+
+# Launched apps write stdout/stderr to <logDir>/<entry-title>.log.
+# Default: cacheDir
+# logDir: ~/.cache/biscuittin
+
+# Downloaded and rendered icons are cached here, on the machine running
+# biscuittin. Default: ~/.cache/biscuittin
+# cacheDir: ~/.cache/biscuittin
+
+# Where to look up icons for entries without an `icon` file, in order.
+# thesvg = https://thesvg.org. Use [] to disable lookups.
+iconProviders: [thesvg]
+
+# Royalty-free background images, shown in rotation. On/off and the interval
+# can also be changed from More on screen (saved to
+# ~/.local/state/biscuittin/settings.yaml, which takes precedence).
+#   wikimedia = featured Commons landscapes / cityscapes (CC / public domain)
+#   picsum    = Lorem Picsum (Unsplash licence; no subject filter)
+#   local     = your own .jpg/.png images in `dir` (credit from <image>.credit)
+backgrounds:
+  enabled: true
+  providers: [wikimedia, picsum]
+  # dir: ~/Pictures/tv   # for the local provider
+  interval: 60   # seconds, 60 (1 minute) to 86400 (1 day)
+  dim: 0.45      # darken images so text stays readable, 0 to 1
+
+# OliveTin integration. With a url set, More > Integrations > OliveTin actions lists every
+# action you can run there; pin any of them (A) to get a tile that starts it.
+# Pins are saved to ~/.local/state/biscuittin/settings.yaml. Actions whose
+# arguments have no default can't be pinned. Icons come from the actions'
+# iconify icons, rendered white.
+# olivetin:
+#   url: https://olivetin.example.com
+
+# Home Assistant integration. With a url set, More > Integrations >
+# Home Assistant automations lists your automations; pin any of them (A) to get a tile that
+# runs it. Needs a long-lived access token (HA: your profile > Security), read
+# from tokenFile (default ~/.config/biscuittin/homeassistant.token).
+# homeassistant:
+#   url: http://homeassistant.local:8123
+#   # tokenFile: ~/.config/biscuittin/homeassistant.token
+
+# Web control: a touch-friendly remote served on 0.0.0.0, switched on from
+# More > Settings > Web control (off by default). It has no login: anyone who
+# can reach the port can press buttons and run pinned tiles. The port is
+# $PORT if set, else this, else 8137. "QR code on home screen" shows its
+# address for phones.
+webControl:
+  port: 8137
+
+# RSS / Atom headlines on the idle home screen. Leave feeds empty to keep the
+# idle screen as the photo only. Each feed is a URL, or {url, name} to set the
+# label shown above the article.
+# rss:
+#   interval: 900          # refresh feeds, seconds (60 to 86400)
+#   rotateSeconds: 60      # how long each article stays on screen (1 minute to 1 day)
+#   feeds:
+#     - https://feeds.bbci.co.uk/news/rss.xml
+#     - name: The Guardian
+#       url: https://www.theguardian.com/uk/rss
+
+# While a background image is showing (or RSS has articles), fade the tiles
+# and menus out after this many seconds without input so the picture and
+# headlines can be seen. The title, clock and image credit stay visible.
+# Any button, key or stick movement brings them back; that first input only
+# wakes the screen. 0 disables. Default 20.
+idleFadeSeconds: 20
+
+# Hide the launcher while a launched app runs. It comes back when the app
+# exits (see restoreOnExit), or when Guide/Home is held on a gamepad.
+hideOnLaunch: true
+restoreHoldSeconds: 1.0
+
+entries:
+  - title: RetroArch
+    subtitle: Retro games
+    command: [retroarch]
+    # Icons are looked up by title. Override the search term with iconQuery,
+    # use iconStyle: color for brand colours (default mono = white glyph), or
+    # point icon at a local PNG to skip lookups.
+    # iconQuery: retroarch
+    # iconStyle: mono
+    # icon: ~/.config/biscuittin/icons/retroarch.png
+
+  - title: Steam
+    subtitle: Big Picture
+    command: [steam, -gamepadui]
+    # When the Steam client is already running, `steam` hands off to it and
+    # exits straight away, so don't treat that exit as "Steam closed".
+    restoreOnExit: false

@@ -1,0 +1,73 @@
+= Installation
+
+biscuittin is distributed as a Flatpak bundle, attached to each https://github.com/jamesread/biscuittin/releases[GitHub release].
+It runs on the Freedesktop 26.08 runtime, from Flathub.
+
+== Install
+
+. Install Flatpak, if your distribution doesn't have it: see https://flatpak.org/setup/[flatpak.org/setup].
+. Download `biscuittin_<version>_x86_64.flatpak` from the latest release.
+. Install it for your user. The runtime is installed from Flathub automatically.
++
+[source,shell]
+----
+flatpak install --user biscuittin_<version>_x86_64.flatpak
+----
+. Run it. A default config is written on first start if none exists (see xref:getting-started.adoc[]):
++
+[source,shell]
+----
+flatpak run io.github.jamesread.biscuittin
+----
+
+To update, install the newer bundle the same way.
+
+== Where files live
+
+A Flatpak app keeps its files in its own directory, `~/.var/app/io.github.jamesread.biscuittin/`, rather than the usual ones:
+
+[cols="1,2"]
+|===
+| File | Path
+
+| Config | `~/.var/app/io.github.jamesread.biscuittin/config/biscuittin/config.yaml`
+| Home Assistant token | `~/.var/app/io.github.jamesread.biscuittin/config/biscuittin/homeassistant.token`
+| Settings | `~/.var/app/io.github.jamesread.biscuittin/.local/state/biscuittin/settings.yaml`
+| Caches and app logs | `~/.var/app/io.github.jamesread.biscuittin/cache/biscuittin/`
+|===
+
+*More > Diagnostics* shows the paths in use.
+To use files elsewhere, such as images for the `local` background provider, give the app access first, for example:
+
+[source,shell]
+----
+flatpak override --user --filesystem=~/Pictures/tv:ro io.github.jamesread.biscuittin
+----
+
+== Permissions
+
+[cols="1,2"]
+|===
+| Permission | Why
+
+| X11, IPC and all devices | To draw the full-screen window with the GPU, and read gamepads.
+| Network | Icons, background images, OliveTin and Home Assistant, and the xref:web-control.adoc[web remote] (which stays off until you switch it on).
+| `org.freedesktop.Flatpak` | biscuittin is a launcher: each tile runs its command *on the host*, with `flatpak-spawn --host`.
+|===
+
+IMPORTANT: The last permission means biscuittin can run any command on your computer, outside the sandbox.
+That is what a launcher is for, but it means the sandbox does not limit what your config's entries can do.
+
+Entries run with the host session's environment plus their own `env`, in the host's view of the file system, so commands and paths in your config are the host's.
+
+== Autostart on a TV box
+
+Run `flatpak run io.github.jamesread.biscuittin` from your session's autostart, for example in an i3 config:
+
+----
+exec --no-startup-id flatpak run io.github.jamesread.biscuittin
+----
+
+== Building from source
+
+See xref:dev/building.adoc[].

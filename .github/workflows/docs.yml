@@ -42,9 +42,10 @@ jobs:
         with:
           path: build/site
 
-  # Pull requests only check that the site builds.
+  # GitHub Pages on a private repo needs a paid plan. Until the repository
+  # is public, only the build job runs so the workflow stays green.
   deploy:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && !github.event.repository.private
     needs: build
     runs-on: ubuntu-latest
     permissions:

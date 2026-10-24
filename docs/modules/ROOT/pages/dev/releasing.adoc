@@ -59,4 +59,5 @@ goreleaser release --snapshot --clean   # the release build, without publishing
 
 Both compile in the SDK, and need `flatpak-builder` and, from Flathub, `org.freedesktop.Platform//26.08`, `org.freedesktop.Sdk//26.08` and `org.freedesktop.Sdk.Extension.golang//26.08`.
 
-The docs site is built and published to GitHub Pages by `.github/workflows/docs.yml`.
+The docs site is built by `.github/workflows/docs.yml`.
+It is published to GitHub Pages only when the repository is public (Pages is not available on a private repo on the free plan).

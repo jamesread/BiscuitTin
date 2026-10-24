@@ -1,6 +1,6 @@
 = Configuration reference
 
-biscuittin reads `~/.config/biscuittin/config.yaml` (or `$XDG_CONFIG_HOME/biscuittin/config.yaml`), or the file given with `-config`.
+BiscuitTin reads `~/.config/biscuittin/config.yaml` (or `$XDG_CONFIG_HOME/biscuittin/config.yaml`), or the file given with `-config`.
 If that file is missing, a default is written and startup continues.
 https://github.com/jamesread/biscuittin/blob/main/config.example.yaml[config.example.yaml] is a commented example.
 

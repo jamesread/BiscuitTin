@@ -1,4 +1,4 @@
-# Flatpak manifest for biscuittin. It packages a prebuilt binary (from
+# Flatpak manifest for BiscuitTin. It packages a prebuilt binary (from
 # GoReleaser, or `make build`) rather than compiling in the SDK; see Makefile.
 app-id: io.github.jamesread.biscuittin
 runtime: org.freedesktop.Platform
@@ -14,7 +14,7 @@ finish-args:
   # Icons, background images, OliveTin/Home Assistant, and the web remote
   # (which stays off until switched on in Settings).
   - --share=network
-  # biscuittin is a launcher: entries run on the host via flatpak-spawn
+  # BiscuitTin is a launcher: entries run on the host via flatpak-spawn
   # --host. This lets it run any host command, by design.
   - --talk-name=org.freedesktop.Flatpak
 modules:

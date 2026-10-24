@@ -1,8 +1,8 @@
-= biscuittin
+= BiscuitTin
 
 *A full-screen app launcher for TV boxes, driven by a gamepad, a remote control or the arrow keys.*
 
-biscuittin turns a Linux box under the TV into something you can use from the sofa.
+BiscuitTin turns a Linux box under the TV into something you can use from the sofa.
 Your games, media apps and home automations are big, readable tiles over a rotating royalty-free photo.
 Pick one with a d-pad and press A.
 It is rendered with OpenGL (via https://github.com/gen2brain/raylib-go[raylib-go]) and configured with one YAML file.
@@ -12,7 +12,7 @@ image::screenshots/home.png[Home screen]
 == Highlights
 
 * *Built for a TV and a controller.* Big tiles, a clock, and control hints that match whatever you last used: Xbox or PlayStation button glyphs, or keyboard keys.
-* *Launches anything.* Each tile runs a command, detached from biscuittin, and the launcher hides while the app is in front. Hold the Guide button to bring it back.
+* *Launches anything.* Each tile runs a command, detached from BiscuitTin, and the launcher hides while the app is in front. Hold the Guide button to bring it back.
 * *Icons without the hassle.* Tiles find their own icons from https://thesvg.org[thesvg.org] by title.
 * *Ambient mode.* When nobody is using it, the tiles fade away to show the photo. See xref:backgrounds.adoc[].
 * *Home automation tiles.* Pin xref:integrations.adoc[OliveTin actions and Home Assistant automations] as tiles.
@@ -21,7 +21,7 @@ image::screenshots/home.png[Home screen]
 
 == Next steps
 
-* xref:install.adoc[Install biscuittin]
+* xref:install.adoc[Install BiscuitTin]
 * xref:getting-started.adoc[Write your first config]
 
 This documentation site is llm.txt compatible.

@@ -1,6 +1,6 @@
 = Controls
 
-biscuittin works with a gamepad, a remote control (most present themselves as a keyboard) or a keyboard.
+BiscuitTin works with a gamepad, a remote control (most present themselves as a keyboard) or a keyboard.
 
 [cols="2,3"]
 |===

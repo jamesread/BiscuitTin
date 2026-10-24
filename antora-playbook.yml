@@ -1,6 +1,6 @@
 ---
 site:
-  title: biscuittin docs
+  title: BiscuitTin docs
   url: https://jamesread.github.io/biscuittin
   start_page: ROOT::index.adoc
   robots: allow

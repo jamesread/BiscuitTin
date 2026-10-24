@@ -1,6 +1,6 @@
 # Marketing screenshots
 
-Repeatable screenshots of the biscuittin X11 window, used in the top-level
+Repeatable screenshots of the BiscuitTin X11 window, used in the top-level
 README and listed in [`screenshot-manifest.yaml`](screenshot-manifest.yaml)
 for indexers.
 
@@ -10,14 +10,14 @@ make screenshots                   # from the repo root, or `make` here
 
 ## How it works
 
-1. Builds biscuittin into `tmp/`.
+1. Builds BiscuitTin into `tmp/`.
 2. Starts a private Xvfb display (`:97`, override with `XDISPLAY=:123`)
    exactly `width`x`height` from `screenshots.ini`. There is no window
    manager, so nothing resizes or decorates the window.
-3. Runs biscuittin with `-size WxH -script tmp/steps`, using
+3. Runs BiscuitTin with `-size WxH -script tmp/steps`, using
    [`config.yaml`](config.yaml) and seeding [`settings.yaml`](settings.yaml)
    into a throwaway `XDG_STATE_HOME`. `generate-script.py` turns
-   `screenshots.ini` into the steps. biscuittin presses the buttons, waits for
+   `screenshots.ini` into the steps. BiscuitTin presses the buttons, waits for
    icons, the background and every animation to settle, saves each PNG from
    its own framebuffer (only the window, always exactly WxH) and quits.
 4. `generate-manifest.py` writes `screenshot-manifest.yaml`.

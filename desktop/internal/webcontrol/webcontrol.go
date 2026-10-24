@@ -142,7 +142,7 @@ func newWebControlMux(bridge *Bridge) http.Handler {
 		}
 	}
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
-		http.Error(w, "biscuittin was built without the web remote; run `make` to build frontend/", http.StatusNotFound)
+		http.Error(w, "BiscuitTin was built without the web remote; run `make` to build frontend/", http.StatusNotFound)
 	})
 	return mux
 }

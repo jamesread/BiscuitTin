@@ -1,4 +1,4 @@
-# biscuittin config. Default location: ~/.config/biscuittin/config.yaml
+# BiscuitTin config. Default location: ~/.config/biscuittin/config.yaml
 # (override with -config <path>).
 
 # {hostname} is replaced with the short host name, e.g. "BiscuitTin on queen".
@@ -26,7 +26,7 @@ tileColor: "#3d5a80"
 # logDir: ~/.cache/biscuittin
 
 # Downloaded and rendered icons are cached here, on the machine running
-# biscuittin. Default: ~/.cache/biscuittin
+# BiscuitTin. Default: ~/.cache/biscuittin
 # cacheDir: ~/.cache/biscuittin
 
 # Where to look up icons for entries without an `icon` file, in order.

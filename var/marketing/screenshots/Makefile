@@ -1,4 +1,4 @@
-# Regenerates marketing screenshots of the biscuittin X11 window, on a private
+# Regenerates marketing screenshots of the BiscuitTin X11 window, on a private
 # Xvfb display of a fixed size, with fictional config and settings. Run `make`
 # here; Xvfb is stopped afterwards, even when a step fails.
 
@@ -40,7 +40,7 @@ up:
 	@for i in $$(seq 50); do [ -e /tmp/.X11-unix/X$(subst :,,$(XDISPLAY)) ] && exit 0; sleep 0.1; done; \
 		echo "Xvfb did not start; see $(TMP)/xvfb.log"; exit 1
 
-# biscuittin runs the generated steps, saves each PNG from its own window
+# BiscuitTin runs the generated steps, saves each PNG from its own window
 # (exactly WIDTHxHEIGHT, no decorations) and quits.
 shoot:
 	./generate-script.py > $(TMP)/steps

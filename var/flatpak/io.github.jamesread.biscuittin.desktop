@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=biscuittin
+Name=BiscuitTin
 GenericName=TV app launcher
 Comment=Full-screen app launcher for TV boxes, driven by a gamepad or remote
 Exec=biscuittin

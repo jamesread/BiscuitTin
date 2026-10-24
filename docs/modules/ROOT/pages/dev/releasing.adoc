@@ -41,7 +41,7 @@ Every push to `main` runs `.github/workflows/build.yml`:
   If any warrant a release, it tags the new version (`1.2.3`, no `v`), creates the GitHub release with notes, and comments on resolved issues and pull requests.
 . semantic-release then runs `goreleaser release` (`.goreleaser.yaml`), which:
 .. builds the frontend,
-.. compiles biscuittin *inside the Freedesktop SDK* (`var/flatpak/go-in-sdk`), so it links against exactly the libraries of the runtime it ships in,
+  .. compiles BiscuitTin *inside the Freedesktop SDK* (`var/flatpak/go-in-sdk`), so it links against exactly the libraries of the runtime it ships in,
 .. wraps it into `biscuittin_<version>_x86_64.flatpak` with `flatpak-builder` (`var/flatpak/`),
 .. attaches the bundle and its checksum to the release.
 

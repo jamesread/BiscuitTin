@@ -2,7 +2,7 @@
 
 == Logs
 
-biscuittin logs to standard error, one line per event with a timestamp, level, component and details:
+BiscuitTin logs to standard error, one line per event with a timestamp, level, component and details:
 
 ----
 2026-10-24T20:00:15.035+0100  info  app    app/run.go:161      started      {"entries": 6, "config": "config.yaml"}

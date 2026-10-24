@@ -4,7 +4,7 @@ package biscuittin.v1;
 
 option go_package = "github.com/jamesread/biscuittin/gen/biscuittin/v1;biscuittinv1";
 
-// RemoteService lets a phone or tablet drive biscuittin like a gamepad, over
+// RemoteService lets a phone or tablet drive BiscuitTin like a gamepad, over
 // the "web control" server (More > Settings > Web control).
 service RemoteService {
   // GetState returns what is on screen, so the remote can show the tiles and
@@ -52,7 +52,7 @@ message GetStateResponse {
   repeated Tile tiles = 2;
   // screen names the current screen, e.g. "home", "more", "settings".
   string screen = 3;
-  // hidden is true while biscuittin is hidden behind a launched app.
+  // hidden is true while BiscuitTin is hidden behind a launched app.
   bool hidden = 4;
   // message is the current status message, if any (e.g. "Launching Steam...").
   string message = 5;

@@ -74,7 +74,7 @@ export const Button = /*@__PURE__*/
   tsEnum(ButtonSchema);
 
 /**
- * RemoteService lets a phone or tablet drive biscuittin like a gamepad, over
+ * RemoteService lets a phone or tablet drive BiscuitTin like a gamepad, over
  * the "web control" server (More > Settings > Web control).
  *
  * @generated from service biscuittin.v1.RemoteService

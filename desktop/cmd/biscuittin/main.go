@@ -1,4 +1,4 @@
-// biscuittin is a full-screen launcher driven by a gamepad, remote control or
+// BiscuitTin is a full-screen launcher driven by a gamepad, remote control or
 // keyboard arrows. Entries are defined in a YAML config file.
 package main
 
@@ -88,7 +88,7 @@ func run(logger *zap.Logger, configPath string, windowed bool, sizeFlag, scriptP
 }
 
 // newLogger logs human-readable lines to stderr, which usually goes to a
-// log file when biscuittin runs on a TV box.
+// log file when BiscuitTin runs on a TV box.
 func newLogger(debug bool) (*zap.Logger, error) {
 	cfg := zap.NewProductionConfig()
 	cfg.Encoding = "console"

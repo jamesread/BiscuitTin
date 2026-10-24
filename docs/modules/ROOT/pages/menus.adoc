@@ -12,12 +12,12 @@ image::screenshots/more.png[More menu]
 | Settings | The settings below.
 | Gamepad info | Each connected gamepad's name, axes and held buttons, live.
 | Diagnostics | Version, display, primary input, paths and integration addresses.
-| System | Exit biscuittin, or reboot or power off the machine.
+| System | Exit BiscuitTin, or reboot or power off the machine.
 |===
 
 == System
 
-*Exit* leaves biscuittin (same as kbd:[Ctrl+Q]).
+*Exit* leaves BiscuitTin (same as kbd:[Ctrl+Q]).
 kbd:[Esc] on the home screen asks first, then exits.
 *Reboot* and *Power off* run `systemctl reboot` and `systemctl poweroff` on the host (via `flatpak-spawn --host` in the Flatpak).
 Both ask first: *Cancel* is selected, then the action.

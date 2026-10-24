@@ -1,6 +1,6 @@
 = Getting started
 
-biscuittin reads one YAML file: `~/.config/biscuittin/config.yaml`.
+BiscuitTin reads one YAML file: `~/.config/biscuittin/config.yaml`.
 Use `-config <path>` to read another.
 If the file is missing, a default is written there and startup continues.
 https://github.com/jamesread/biscuittin/blob/main/config.example.yaml[config.example.yaml] is a longer commented example; the xref:config.adoc[] lists every key.
@@ -27,11 +27,11 @@ entries:
     restoreOnExit: false
 ----
 
-biscuittin finds icons for these tiles by their titles (see xref:icons.adoc[]), and adds a *More* tile at the end for menus and settings.
+BiscuitTin finds icons for these tiles by their titles (see xref:icons.adoc[]), and adds a *More* tile at the end for menus and settings.
 
 == Running it
 
-On the TV box, start biscuittin from your session's autostart (for example an i3 `exec` line, or a desktop autostart entry).
+On the TV box, start BiscuitTin from your session's autostart (for example an i3 `exec` line, or a desktop autostart entry).
 It opens full screen on the current monitor.
 
 To try it on a desktop first, run it in a window:
@@ -60,7 +60,7 @@ Quit with kbd:[Esc] on the home screen (it asks first), kbd:[Ctrl+Q], or *More >
 == What happens when you launch a tile
 
 The command starts in its own session, with input from `/dev/null` and output appended to `~/.cache/biscuittin/<title>.log`.
-It keeps running if biscuittin exits or is killed.
+It keeps running if BiscuitTin exits or is killed.
 
 With `hideOnLaunch` (the default), the launcher hides while the app runs and comes back when the app exits.
 Set `restoreOnExit: false` on an entry whose command exits straight away.

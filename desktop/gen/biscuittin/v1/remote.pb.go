@@ -207,7 +207,7 @@ type GetStateResponse struct {
 	Tiles []*Tile `protobuf:"bytes,2,rep,name=tiles,proto3" json:"tiles,omitempty"`
 	// screen names the current screen, e.g. "home", "more", "settings".
 	Screen string `protobuf:"bytes,3,opt,name=screen,proto3" json:"screen,omitempty"`
-	// hidden is true while biscuittin is hidden behind a launched app.
+	// hidden is true while BiscuitTin is hidden behind a launched app.
 	Hidden bool `protobuf:"varint,4,opt,name=hidden,proto3" json:"hidden,omitempty"`
 	// message is the current status message, if any (e.g. "Launching Steam...").
 	Message       string `protobuf:"bytes,5,opt,name=message,proto3" json:"message,omitempty"`

@@ -262,7 +262,7 @@ func ExpandPath(p string) string {
 	return p
 }
 
-// OliveTinConfig points biscuittin at an OliveTin server whose actions can be
+// OliveTinConfig points BiscuitTin at an OliveTin server whose actions can be
 // pinned as tiles from More > OliveTin actions.
 type OliveTinConfig struct {
 	URL string `yaml:"url"`

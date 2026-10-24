@@ -1,7 +1,7 @@
 ---
 name: x11-marketing-screenshots
 description: >-
-  Regenerate, add or change biscuittin's marketing screenshots: repeatable,
+  Regenerate, add or change BiscuitTin's marketing screenshots: repeatable,
   fixed-size PNGs of the X11 window only, captured by the app itself on a
   private Xvfb display with fictional config, then indexed in
   var/marketing/screenshots/screenshot-manifest.yaml and shown in the README.
@@ -13,7 +13,7 @@ description: >-
 
 # x11-marketing-screenshots
 
-biscuittin is a raylib/OpenGL X11 app, not a web app, so browser tooling
+BiscuitTin is a raylib/OpenGL X11 app, not a web app, so browser tooling
 (`repo-helper screenshot`) can't capture it. Instead the app is instrumented to
 drive and capture itself:
 

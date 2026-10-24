@@ -88,7 +88,7 @@ export declare type GetStateResponse = Message<"biscuittin.v1.GetStateResponse">
   screen: string;
 
   /**
-   * hidden is true while biscuittin is hidden behind a launched app.
+   * hidden is true while BiscuitTin is hidden behind a launched app.
    *
    * @generated from field: bool hidden = 4;
    */
@@ -216,7 +216,7 @@ export enum Button {
 export declare const ButtonSchema: GenEnum<Button>;
 
 /**
- * RemoteService lets a phone or tablet drive biscuittin like a gamepad, over
+ * RemoteService lets a phone or tablet drive BiscuitTin like a gamepad, over
  * the "web control" server (More > Settings > Web control).
  *
  * @generated from service biscuittin.v1.RemoteService

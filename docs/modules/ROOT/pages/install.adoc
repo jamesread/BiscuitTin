@@ -1,6 +1,6 @@
 = Installation
 
-biscuittin is distributed as a Flatpak bundle, attached to each https://github.com/jamesread/biscuittin/releases[GitHub release].
+BiscuitTin is distributed as a Flatpak bundle, attached to each https://github.com/jamesread/biscuittin/releases[GitHub release].
 It runs on the Freedesktop 26.08 runtime, from Flathub.
 
 == Install
@@ -52,10 +52,10 @@ flatpak override --user --filesystem=~/Pictures/tv:ro io.github.jamesread.biscui
 
 | X11, IPC and all devices | To draw the full-screen window with the GPU, and read gamepads.
 | Network | Icons, background images, OliveTin and Home Assistant, and the xref:web-control.adoc[web remote] (which stays off until you switch it on).
-| `org.freedesktop.Flatpak` | biscuittin is a launcher: each tile runs its command *on the host*, with `flatpak-spawn --host`.
+| `org.freedesktop.Flatpak` | BiscuitTin is a launcher: each tile runs its command *on the host*, with `flatpak-spawn --host`.
 |===
 
-IMPORTANT: The last permission means biscuittin can run any command on your computer, outside the sandbox.
+IMPORTANT: The last permission means BiscuitTin can run any command on your computer, outside the sandbox.
 That is what a launcher is for, but it means the sandbox does not limit what your config's entries can do.
 
 Entries run with the host session's environment plus their own `env`, in the host's view of the file system, so commands and paths in your config are the host's.

@@ -78,7 +78,7 @@ func (u *ui) openConfirmFrom(back screen, title, actionTitle string, do func()) 
 }
 
 func (u *ui) promptExit() {
-	u.openConfirmFrom(screenHome, "Exit biscuittin?", "Exit", func() { u.quit = true })
+	u.openConfirmFrom(screenHome, "Exit BiscuitTin?", "Exit", func() { u.quit = true })
 }
 
 func (u *ui) leaveConfirm() {

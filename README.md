@@ -1,6 +1,6 @@
 <div align = "center">
   <img alt = "project logo" src = "logo.svg" width = "128" />
-  <h1>biscuittin</h1>
+  <h1>BiscuitTin</h1>
 
   A full-screen app launcher for TV boxes, driven by a gamepad, a remote control
   (which presents as a keyboard) or arrow keys. Rendered with OpenGL via
@@ -47,7 +47,7 @@ Screenshots use fictional test data and are regenerated with `make screenshots`
 
 ## Install
 
-biscuittin is distributed as a Flatpak. Download
+BiscuitTin is distributed as a Flatpak. Download
 `biscuittin_<version>_x86_64.flatpak` from the
 [latest release](https://github.com/jamesread/biscuittin/releases), then:
 
@@ -76,7 +76,7 @@ sandbox doesn't limit what entries can do. See the
 
 Apps are started in their own session (`setsid`) with stdin from `/dev/null`
 and output appended to `~/.cache/biscuittin/<title>.log`, so they keep running
-if biscuittin exits or is killed. With `hideOnLaunch`, the launcher unmaps
+if BiscuitTin exits or is killed. With `hideOnLaunch`, the launcher unmaps
 itself while the app runs and returns when it exits (unless the entry sets
 `restoreOnExit: false`) or when Guide is held.
 
@@ -166,7 +166,7 @@ touch-friendly remote: a d-pad, OK and Back, plus a button per tile. **QR code
 on home screen** (also off by default) shows its address so a phone can scan
 it, only while web control is running. Diagnostics shows the URL.
 
-The page talks to biscuittin over ConnectRPC (`protocol/biscuittin/v1/remote.proto`,
+The page talks to BiscuitTin over ConnectRPC (`protocol/biscuittin/v1/remote.proto`,
 `RemoteService`), so other clients can use the same API. There is no
 authentication; only enable it on a trusted network.
 
@@ -211,4 +211,4 @@ under the SIL Open Font License 1.1.
 
 ## License
 
-biscuittin is licensed under the [GNU Affero General Public License v3.0](LICENSE).
+BiscuitTin is licensed under the [GNU Affero General Public License v3.0](LICENSE).

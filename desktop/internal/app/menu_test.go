@@ -71,7 +71,7 @@ func TestRebootAndPoweroffNeedConfirm(t *testing.T) {
 func TestHomeEscPromptsExit(t *testing.T) {
 	u := &ui{settings: &settings.Settings{}}
 	u.promptExit()
-	if u.screen != screenConfirm || u.confirmTitle != "Exit biscuittin?" || u.menuSel != 0 {
+	if u.screen != screenConfirm || u.confirmTitle != "Exit BiscuitTin?" || u.menuSel != 0 {
 		t.Fatalf("exit prompt: screen=%d title=%q sel=%d", u.screen, u.confirmTitle, u.menuSel)
 	}
 	if titles := menuTitles(u.confirmMenu()); !slices.Equal(titles, []string{"Cancel", "Exit"}) {

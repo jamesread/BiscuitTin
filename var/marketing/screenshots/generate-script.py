@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Writes the biscuittin -script steps for screenshots.ini to stdout.
+"""Writes the BiscuitTin -script steps for screenshots.ini to stdout.
 
 Each section with title= becomes its presses followed by a shot of
 <name>.png in this directory. Run via `make shoot`.

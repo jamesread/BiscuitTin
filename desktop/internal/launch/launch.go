@@ -21,11 +21,11 @@ type Exit struct {
 	Err   error
 }
 
-// Start starts an entry fully detached from biscuittin: its own session
+// Start starts an entry fully detached from BiscuitTin: its own session
 // (no SIGHUP or terminal signals from us), no parent-death signal, stdin from
-// /dev/null and output to a per-entry log file. If biscuittin dies the child is
+// /dev/null and output to a per-entry log file. If BiscuitTin dies the child is
 // reparented and keeps running. A goroutine reaps it so no zombies are left
-// while biscuittin is alive. Inside the Flatpak sandbox the command runs on
+// while BiscuitTin is alive. Inside the Flatpak sandbox the command runs on
 // the host instead (see command).
 func Start(cfg *config.Config, index int, exits chan<- Exit) (int, error) {
 	e := cfg.Entries[index]

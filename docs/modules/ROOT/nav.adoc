@@ -1,7 +1,7 @@
 * xref:index.adoc[Introduction]
 * xref:install.adoc[Installation]
 * xref:getting-started.adoc[Getting started]
-* Using biscuittin
+* Using BiscuitTin
 ** xref:controls.adoc[Controls]
 ** xref:menus.adoc[Menus and settings]
 ** xref:backgrounds.adoc[Background images]

@@ -23,7 +23,7 @@ import (
 //	sleep 0.5            wait this many seconds
 //	shot out/home.png    save the window as a PNG
 //
-// biscuittin quits after the last step, and exits non-zero if a step fails.
+// BiscuitTin quits after the last step, and exits non-zero if a step fails.
 // press and shot first wait until the screen is settled: icons and the
 // background image loaded, and every animation finished. So scripts do not
 // depend on timing, and a press is never swallowed by a fade. As with a

@@ -1,4 +1,4 @@
-# biscuittin config. Default location: ~/.config/biscuittin/config.yaml
+# BiscuitTin config. Default location: ~/.config/biscuittin/config.yaml
 # (override with -config <path>). Written on first start if the file is missing.
 
 # {hostname} is replaced with the short host name, e.g. "BiscuitTin on queen".

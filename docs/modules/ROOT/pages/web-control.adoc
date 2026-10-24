@@ -1,6 +1,6 @@
 = Web remote
 
-biscuittin can serve a touch-friendly remote for your phone: a d-pad, OK and Back, and a button per tile.
+BiscuitTin can serve a touch-friendly remote for your phone: a d-pad, OK and Back, and a button per tile.
 
 IMPORTANT: The web remote has no login.
 Anyone who can reach its port can press buttons and run pinned tiles.
@@ -29,4 +29,4 @@ webControl:
 
 == API
 
-The page talks to biscuittin over https://connectrpc.com[ConnectRPC] (`protocol/biscuittin/v1/remote.proto`, `RemoteService`), so other clients can use the same API: `GetState`, `PressButton` and `ActivateTile`.
+The page talks to BiscuitTin over https://connectrpc.com[ConnectRPC] (`protocol/biscuittin/v1/remote.proto`, `RemoteService`), so other clients can use the same API: `GetState`, `PressButton` and `ActivateTile`.

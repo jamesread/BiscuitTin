@@ -1,4 +1,4 @@
-# Wraps a biscuittin binary into a Flatpak bundle. GoReleaser runs this after
+# Wraps a BiscuitTin binary into a Flatpak bundle. GoReleaser runs this after
 # building (see .goreleaser.yaml); `make flatpak` at the repo root runs it
 # for a local build.
 

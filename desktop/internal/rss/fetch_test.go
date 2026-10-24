@@ -130,3 +130,19 @@ func TestNilFetcher(t *testing.T) {
 		t.Fatalf("status = %q", f.Status())
 	}
 }
+
+func TestLoadItemsAndStatic(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "items.json")
+	raw := `{"items":[{"feed":"Gazette","title":"Hello","summary":"A note.","link":"https://news.example.com/a"}]}`
+	if err := os.WriteFile(path, []byte(raw), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	items, err := LoadItems(path)
+	if err != nil || len(items) != 1 || items[0].Title != "Hello" {
+		t.Fatalf("LoadItems = %+v, %v", items, err)
+	}
+	f := Static(items)
+	if got := f.Items(); len(got) != 1 || got[0].Feed != "Gazette" {
+		t.Fatalf("Static items = %+v", got)
+	}
+}

@@ -4,7 +4,7 @@
 #
 # $MKT_DIR (this directory) is set by the Makefile; caches and logs stay in tmp/.
 
-title: "BiscuitTin on living-room"
+title: "BiscuitTin on media-pc"
 # 6, not 5: with 9 tiles, two rows of 5 overlap the footer at 1080p.
 columns: 6
 background: "#14161f"

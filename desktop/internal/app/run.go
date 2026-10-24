@@ -419,7 +419,7 @@ func (s *session) handleExits() {
 
 func (s *session) noteExit(ev launch.Exit) {
 	e := s.cfg.Entries[ev.Index]
-	s.u.running[ev.Index]--
+	s.u.pids[ev.Index] = removePID(s.u.pids[ev.Index], ev.PID)
 	ranFor := time.Since(s.started[ev.PID])
 	delete(s.started, ev.PID)
 	lg().Info("app exited", zap.String("title", e.Title), zap.Int("pid", ev.PID), zap.Duration("ranFor", ranFor.Round(time.Millisecond)), zap.Error(ev.Err))
@@ -452,7 +452,7 @@ func (s *session) showIfLastWaiting(ev launch.Exit) {
 	if s.waitingFor != ev.Index {
 		return
 	}
-	if s.u.running[ev.Index] != 0 {
+	if hasLivePID(s.u.pids[ev.Index]) {
 		return
 	}
 	s.show()
@@ -651,11 +651,14 @@ func (s *session) hasIdleBackdrop() bool {
 	return s.u.hasRSS()
 }
 
+var idleBlocking = map[screen]bool{
+	screenGamepads: true,
+	screenConfirm:  true,
+	screenRunning:  true,
+}
+
 func (s *session) blocksIdle() bool {
-	if s.u.screen == screenGamepads {
-		return true
-	}
-	return s.u.screen == screenConfirm
+	return idleBlocking[s.u.screen]
 }
 
 func (s *session) handleHome(a action) {
@@ -698,20 +701,43 @@ func (s *session) runActionTile(t tile) {
 }
 
 func (s *session) launchEntry(t tile) {
-	e := s.cfg.Entries[t.entry]
-	pid, err := launch.Start(s.cfg, t.entry, s.exits)
+	if hasLivePID(s.u.pids[t.entry]) {
+		s.openRunningMenu(t.entry)
+		return
+	}
+	s.startEntry(t.entry)
+}
+
+func (s *session) openRunningMenu(entry int) {
+	s.u.openRunning(s.cfg.Entries[entry].Title, func() { s.killEntry(entry) }, func() { s.startEntry(entry) })
+}
+
+func (s *session) startEntry(entry int) {
+	s.u.screen = screenHome
+	e := s.cfg.Entries[entry]
+	pid, err := launch.Start(s.cfg, entry, s.exits)
 	if err != nil {
 		lg().Warn("launch failed", zap.String("title", e.Title), zap.Error(err))
 		s.u.setToast("Could not launch "+e.Title+": "+err.Error(), colorBad, 6)
 		return
 	}
-	s.noteLaunch(e, t.entry, pid)
+	s.noteLaunch(e, entry, pid)
+}
+
+func (s *session) killEntry(entry int) {
+	s.u.screen = screenHome
+	title := s.cfg.Entries[entry].Title
+	if err := killPIDs(livePIDs(s.u.pids[entry])); err != nil {
+		s.u.setToast("Could not stop "+title+": "+err.Error(), colorBad, 6)
+		return
+	}
+	s.u.setToast("Stopping "+title+"...", colorOK, 3)
 }
 
 func (s *session) noteLaunch(e config.Entry, entry, pid int) {
 	lg().Info("launched", zap.String("title", e.Title), zap.Int("pid", pid))
 	s.started[pid] = time.Now()
-	s.u.running[entry]++
+	s.u.pids[entry] = append(s.u.pids[entry], pid)
 	s.u.setToast("Launching "+e.Title+"...", colorOK, 3)
 	if !s.hideOnLaunch {
 		return

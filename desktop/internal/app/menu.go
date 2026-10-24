@@ -23,6 +23,7 @@ const (
 	screenActionList
 	screenSystem
 	screenConfirm
+	screenRunning
 )
 
 // menuItem is one row of a list menu. It is a link (target, or open for
@@ -93,6 +94,22 @@ func (u *ui) confirmMenu() []menuItem {
 	return []menuItem{
 		{title: "Cancel", open: u.leaveConfirm},
 		{title: u.confirmLabel, open: u.confirmDo},
+	}
+}
+
+func (u *ui) openRunning(title string, kill, again func()) {
+	u.runningTitle = title + " is running"
+	u.runningKill = kill
+	u.runningAgain = again
+	u.screen = screenRunning
+	u.menuSel = 0
+}
+
+func (u *ui) runningMenu() []menuItem {
+	return []menuItem{
+		{title: "Cancel", open: func() { u.screen = screenHome }},
+		{title: "Start another instance", open: u.runningAgain},
+		{title: "Stop", open: u.runningKill},
 	}
 }
 
@@ -186,18 +203,33 @@ func (u *ui) settingsMenu() []menuItem {
 
 // menuFor returns the items and title of a list-menu screen.
 func (u *ui) menuFor(sc screen) (string, []menuItem, screen) {
-	switch sc {
-	case screenSettings:
-		return "Settings", u.settingsMenu(), screenMore
-	case screenIntegrations:
-		return "Integrations", u.integrationsMenu(), screenMore
-	case screenSystem:
-		return "System", u.systemMenu(), screenMore
-	case screenConfirm:
-		return u.confirmTitle, u.confirmMenu(), u.confirmBack
-	default:
-		return "More", u.moreMenu(), screenHome
+	if title, items, parent, ok := u.listMenu(sc); ok {
+		return title, items, parent
 	}
+	return "More", u.moreMenu(), screenHome
+}
+
+func (u *ui) listMenu(sc screen) (string, []menuItem, screen, bool) {
+	if sc == screenSettings {
+		return "Settings", u.settingsMenu(), screenMore, true
+	}
+	if sc == screenIntegrations {
+		return "Integrations", u.integrationsMenu(), screenMore, true
+	}
+	if sc == screenSystem {
+		return "System", u.systemMenu(), screenMore, true
+	}
+	return u.promptMenu(sc)
+}
+
+func (u *ui) promptMenu(sc screen) (string, []menuItem, screen, bool) {
+	if sc == screenConfirm {
+		return u.confirmTitle, u.confirmMenu(), u.confirmBack, true
+	}
+	if sc == screenRunning {
+		return u.runningTitle, u.runningMenu(), screenHome, true
+	}
+	return "", nil, 0, false
 }
 
 func (u *ui) openMenu(sc screen) {
@@ -228,17 +260,27 @@ var gamepadButtonNames = map[int32]string{
 }
 
 // handleMenu processes an action on a non-home screen.
+var listMenus = map[screen]bool{
+	screenMore:         true,
+	screenSettings:     true,
+	screenIntegrations: true,
+	screenSystem:       true,
+	screenConfirm:      true,
+	screenRunning:      true,
+}
+
 func (u *ui) handleMenu(a action) {
-	switch u.screen {
-	case screenMore, screenSettings, screenIntegrations, screenSystem, screenConfirm:
+	if listMenus[u.screen] {
 		u.handleListMenu(a)
-	case screenDiagnostics, screenGamepads:
-		// On gamepads, B is a button worth inspecting, so only keyboard/remote
-		// Back and the A button leave. Diagnostics uses the same keys.
-		u.leaveInfoScreen(a)
-	case screenActionList:
-		u.handleActionList(a)
+		return
 	}
+	if u.screen == screenActionList {
+		u.handleActionList(a)
+		return
+	}
+	// On gamepads, B is a button worth inspecting, so only keyboard/remote
+	// Back and the A button leave. Diagnostics uses the same keys.
+	u.leaveInfoScreen(a)
 }
 
 func (u *ui) leaveInfoScreen(a action) {
@@ -318,17 +360,24 @@ func (u *ui) leaveMenu(parent screen) {
 }
 
 func (u *ui) drawMenu(w, h, s, margin float32) {
-	switch u.screen {
-	case screenMore, screenSettings, screenIntegrations, screenSystem, screenConfirm:
+	if listMenus[u.screen] {
 		title, items, _ := u.menuFor(u.screen)
 		u.drawListMenu(title, items, w, s, margin)
-	case screenGamepads:
-		u.drawGamepads(w, s, margin)
-	case screenDiagnostics:
-		u.drawDiagnostics(w, h, s, margin)
-	case screenActionList:
-		u.drawActionList(w, h, s, margin)
+		return
 	}
+	u.drawInfoScreen(w, h, s, margin)
+}
+
+func (u *ui) drawInfoScreen(w, h, s, margin float32) {
+	if u.screen == screenGamepads {
+		u.drawGamepads(w, s, margin)
+		return
+	}
+	if u.screen == screenDiagnostics {
+		u.drawDiagnostics(w, h, s, margin)
+		return
+	}
+	u.drawActionList(w, h, s, margin)
 }
 
 func (u *ui) drawListMenu(title string, items []menuItem, w, s, margin float32) {

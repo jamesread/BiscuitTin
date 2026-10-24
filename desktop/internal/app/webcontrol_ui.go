@@ -21,6 +21,7 @@ var screenNames = map[screen]string{
 	screenDiagnostics:  "diagnostics",
 	screenSystem:       "system",
 	screenConfirm:      "confirm",
+	screenRunning:      "running",
 }
 
 // syncWebControl starts or stops the web server to match the setting, and

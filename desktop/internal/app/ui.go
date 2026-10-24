@@ -53,10 +53,12 @@ type ui struct {
 	cfg             *config.Config
 	settings        *settings.Settings
 	confirmDo       func()
+	runningKill     func()
+	runningAgain    func()
 	qr              *qr.Code
 	glyphs          map[string]rl.Texture2D
 	sources         []integrations.Source
-	running         []int
+	pids            [][]int
 	tiles           []tile
 	listSource      string
 	captureTo       string
@@ -65,6 +67,7 @@ type ui struct {
 	clock           string
 	confirmTitle    string
 	confirmLabel    string
+	runningTitle    string
 	debugSocket     string
 	configPath      string
 	webURL          string
@@ -107,7 +110,7 @@ func newUI(cfg *config.Config, settings *settings.Settings) *ui {
 		tileColor:      contrast.AccessibleTileColor(contrast.ParseHex(cfg.TileColor, color.RGBA{61, 90, 128, 255})),
 		icons:          map[string]rl.Texture2D{},
 		scales:         map[string]float32{},
-		running:        make([]int, len(cfg.Entries)),
+		pids:           make([][]int, len(cfg.Entries)),
 		actionsRunning: map[string]int{},
 		sources:        integrations.NewSources(cfg),
 		lists:          map[string]*uiActionList{},
@@ -480,7 +483,7 @@ func (u *ui) drawFooter(w, h, s, margin float32) {
 func (u *ui) tileRunning(t tile) bool {
 	switch t.kind {
 	case tileEntry:
-		return u.running[t.entry] > 0
+		return hasLivePID(u.pids[t.entry])
 	case tileAction:
 		return u.actionsRunning[t.key] > 0
 	}
@@ -563,12 +566,18 @@ func (u *ui) paintTileFace(tl tile, cx, cy, rw, rh float32) {
 	u.paintTileLetter(tl, cx, cy, rh)
 }
 
+func (u *ui) paintRunningDot(rect rl.Rectangle, s float32) {
+	c := rl.Vector2{X: rect.X + rect.Width - 28*s, Y: rect.Y + 28*s}
+	rl.DrawCircleV(c, 12*s, u.fa(rl.ColorAlpha(rl.Black, 0.45)))
+	rl.DrawCircleV(c, 8*s, u.fa(colorOK))
+}
+
 func (u *ui) paintTileChrome(tl tile, rect rl.Rectangle, selected bool, s float32) {
 	if selected {
 		rl.DrawRectangleRoundedLinesEx(rect, 0.12, 12, 6*s, u.fa(u.accent))
 	}
 	if u.tileRunning(tl) {
-		rl.DrawCircleV(rl.Vector2{X: rect.X + rect.Width - 28*s, Y: rect.Y + 28*s}, 10*s, u.fa(u.accent))
+		u.paintRunningDot(rect, s)
 	}
 }
 

@@ -17,6 +17,14 @@
 
 **Documentation: <https://jamesread.github.io/biscuittin>**
 
+## FAQ
+
+**Was AI used to build this project?**
+Yes, all code was written with AI. The human that prompted that AI also has 20 years coding experience. See [Level 4](https://blog.jread.com/posts/ai-levels-of-autonomy-in-software-engineering/) for more info.
+
+**Is this another media player?**
+No. This project is not a media player, it is a fullscreen launcher. It can launch media players like Jellyfin, or launch other apps like RetroArch, and help you swap between them easily.
+
 ## Screenshots
 
 ### Home screen
@@ -31,11 +39,23 @@ Every app, game and home automation you use on the TV as a big, readable tile, p
 
 When nobody is using it, the tiles fade away to show the photo and its credit, with the clock still visible. Any button brings them back.
 
+### RSS headlines
+
+![RSS headlines](var/marketing/screenshots/home-idle-rss.png)
+
+Idle mode can show a rotating headline from your RSS or Atom feeds over the photo, so the living-room screen still has something to read.
+
 ### More menu
 
 ![More menu](var/marketing/screenshots/more.png)
 
 Integrations, settings, gamepad info and diagnostics are one button away, and every menu works from the sofa with just a d-pad and two buttons.
+
+### Integrations
+
+![Integrations](var/marketing/screenshots/integrations.png)
+
+OliveTin actions and Home Assistant automations sit under More, ready to pin as tiles, without leaving the sofa.
 
 ### Settings
 

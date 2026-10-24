@@ -10,7 +10,7 @@ import (
 
 func TestLoadScript(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "steps")
-	src := "# comment\n\nclock 20:15\ninput xbox\npress right\nsleep 0.5\nshot out/home.png\n"
+	src := "# comment\n\nclock 20:15\ninput xbox\npress right\nsleep 0.5\nrss seed/rss/article.json\nshot out/home.png\n"
 	if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -22,13 +22,13 @@ func TestLoadScript(t *testing.T) {
 	for _, st := range sc.steps {
 		cmds = append(cmds, st.cmd+" "+st.arg)
 	}
-	if got := strings.Join(cmds, "|"); got != "clock 20:15|input xbox|press right|sleep 0.5|shot out/home.png" {
+	if got := strings.Join(cmds, "|"); got != "clock 20:15|input xbox|press right|sleep 0.5|rss seed/rss/article.json|shot out/home.png" {
 		t.Errorf("steps = %s", got)
 	}
 }
 
 func TestLoadScriptRejectsBadSteps(t *testing.T) {
-	for _, line := range []string{"press jump", "clock 8pm", "input wiimote", "sleep soon", "shot", "dance"} {
+	for _, line := range []string{"press jump", "clock 8pm", "input wiimote", "sleep soon", "shot", "rss", "dance"} {
 		path := filepath.Join(t.TempDir(), "steps")
 		if err := os.WriteFile(path, []byte(line+"\n"), 0o644); err != nil {
 			t.Fatal(err)

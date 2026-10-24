@@ -1,6 +1,8 @@
 = RSS headlines
 
 When the home screen is idle, configured RSS and Atom feeds show as rotating article summaries: the feed name, how recent the piece is, the title, and a short plain-text excerpt, in a single rounded card at the bottom left.
+
+image::screenshots/home-idle-rss.png[RSS headlines on the idle home screen]
 Articles slide in from the right and out to the left.
 Each one stays at least a minute (the same steps as the background interval, from *More > Settings*).
 An article is not shown again in the same session.

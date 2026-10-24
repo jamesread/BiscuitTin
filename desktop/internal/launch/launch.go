@@ -83,6 +83,26 @@ func Start(cfg *config.Config, index int, exits chan<- Exit) (int, error) {
 	return waitLaunch(cmd, index, exits)
 }
 
+// Alive is true when pid is still a live process.
+func Alive(pid int) bool {
+	if pid <= 0 {
+		return false
+	}
+	return syscall.Kill(pid, 0) == nil
+}
+
+// Kill sends SIGTERM to the process group started by Start (Setsid), or to
+// the process itself if it is not a group leader.
+func Kill(pid int) error {
+	if pid <= 0 {
+		return fmt.Errorf("invalid pid %d", pid)
+	}
+	if err := syscall.Kill(-pid, syscall.SIGTERM); err == nil {
+		return nil
+	}
+	return syscall.Kill(pid, syscall.SIGTERM)
+}
+
 // Host builds a command that runs on the host. Inside the Flatpak sandbox
 // that is flatpak-spawn --host, the same as launched entries.
 func Host(args []string) *exec.Cmd {

@@ -2,6 +2,8 @@
 
 Each configured integration adds a list under *More > Integrations*.
 Press A on an item to pin or unpin it.
+
+image::screenshots/integrations.png[Integrations menu with OliveTin and Home Assistant]
 Pinned items become tiles after your configured entries.
 Pins are saved to `settings.yaml` with their titles, so the tiles appear even when the server is down.
 

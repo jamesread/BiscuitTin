@@ -1,10 +1,13 @@
 package launch
 
 import (
+	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"testing"
+	"time"
 )
 
 func TestHostRunsOnHost(t *testing.T) {
@@ -46,5 +49,35 @@ func TestSlug(t *testing.T) {
 		if got := slug(in); got != want {
 			t.Errorf("slug(%q) = %q; want %q", in, got, want)
 		}
+	}
+}
+
+func TestAliveAndKill(t *testing.T) {
+	if Alive(0) || Alive(-1) {
+		t.Fatal("non-positive pids are not alive")
+	}
+	if !Alive(os.Getpid()) {
+		t.Fatal("this process should be alive")
+	}
+	cmd := exec.CommandContext(context.Background(), "sleep", "30")
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	pid := cmd.Process.Pid
+	if !Alive(pid) {
+		t.Fatalf("started pid %d should be alive", pid)
+	}
+	if err := Kill(pid); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- cmd.Wait() }()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("kill did not stop sleep")
+	}
+	if Alive(pid) {
+		t.Fatalf("pid %d should be dead after kill", pid)
 	}
 }

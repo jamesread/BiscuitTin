@@ -27,6 +27,9 @@ def main():
             out.append("input %s" % inp)
             last_input = inp
         out.append("# [%s]" % section)
+        rss = cp.get(section, "rss", fallback="").strip()
+        if rss:
+            out.append("rss %s" % (HERE / rss))
         for button in cp.get(section, "steps").replace(",", " ").split():
             out.append("press %s" % button)
         out.append("shot %s" % (HERE / ("%s.png" % name)))

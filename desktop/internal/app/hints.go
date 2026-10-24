@@ -69,6 +69,7 @@ var screenHints = map[screen]func() []hint{
 	screenGamepads:    gamepadHints,
 	screenDiagnostics: diagnosticsHints,
 	screenConfirm:     confirmHints,
+	screenRunning:     confirmHints,
 }
 
 // hintsFor returns the control help for the current screen.

@@ -42,6 +42,23 @@ type Fetcher struct {
 	mu       sync.RWMutex
 }
 
+// Static returns a fetcher that only serves items, with no downloads.
+func Static(items []Item) *Fetcher {
+	return &Fetcher{items: items}
+}
+
+func LoadItems(path string) ([]Item, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var doc feedCache
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return nil, err
+	}
+	return doc.Items, nil
+}
+
 func NewFetcher(cfg *config.Config) *Fetcher {
 	feeds := configuredFeeds(cfg.RSS.Feeds)
 	if len(feeds) == 0 {

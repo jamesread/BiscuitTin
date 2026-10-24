@@ -37,7 +37,8 @@ Xbox glyphs whatever is plugged in.
 ## Changing the screenshots
 
 Edit [`screenshots.ini`](screenshots.ini): one section per PNG, in order, in
-one app session. `steps` are presses after the previous capture. Every section
+one app session. `steps` are presses after the previous capture. `rss` loads a
+canned article JSON (no network) before that section's shot. Every section
 needs `title` and `description`; the README captions are the descriptions.
 Then run `make` and look at every PNG.
 

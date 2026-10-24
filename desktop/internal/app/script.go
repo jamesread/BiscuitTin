@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/jamesread/biscuittin/internal/rss"
 )
 
 // A script drives the UI without a person, for repeatable screenshots
@@ -21,6 +22,7 @@ import (
 //	input xbox           show gamepad hints: xbox, playstation or keyboard
 //	press right          up, down, left, right, select or back
 //	sleep 0.5            wait this many seconds
+//	rss articles.json    show these canned RSS items on the idle screen
 //	shot out/home.png    save the window as a PNG
 //
 // BiscuitTin quits after the last step, and exits non-zero if a step fails.
@@ -111,6 +113,7 @@ var scriptValidators = map[string]func(string) error{
 	"press": validatePress,
 	"sleep": validateSleep,
 	"shot":  validateShot,
+	"rss":   validateRSS,
 }
 
 func (st scriptStep) validate() error {
@@ -166,6 +169,13 @@ func validateShot(arg string) error {
 	return nil
 }
 
+func validateRSS(arg string) error {
+	if arg == "" {
+		return fmt.Errorf("rss needs a file name")
+	}
+	return nil
+}
+
 // step runs once per frame, before drawing. It returns an action to apply
 // this frame, and done once the last step has finished. ready reports work
 // outside the UI (icon lookups, background loading) still to finish.
@@ -215,14 +225,28 @@ func (sc *script) runStep(u *ui, in *input, ready bool, now float64) (a action, 
 }
 
 func (sc *script) runBlocking(u *ui, ready bool, st scriptStep, now float64) (action, error, bool) {
-	switch st.cmd {
-	case "press":
+	if st.cmd == "press" {
 		return sc.doPress(u, ready, st, now)
-	case "sleep":
+	}
+	if st.cmd == "sleep" {
 		return sc.doSleep(st, now)
-	case "shot":
+	}
+	return sc.runCapture(u, ready, st, now)
+}
+
+func (sc *script) runCapture(u *ui, ready bool, st scriptStep, now float64) (action, error, bool) {
+	if st.cmd == "shot" {
 		return sc.doShot(u, ready, st, now)
 	}
+	return sc.doRSS(u, st)
+}
+
+func (sc *script) doRSS(u *ui, st scriptStep) (action, error, bool) {
+	items, err := rss.LoadItems(st.arg)
+	if err != nil {
+		return actionNone, fmt.Errorf("line %d: rss: %w", st.line, err), false
+	}
+	u.rss = rss.Static(items)
 	sc.pos++
 	return actionNone, nil, true
 }

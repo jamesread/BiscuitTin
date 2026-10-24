@@ -18,11 +18,27 @@ screenshots:
     width: 1920
     height: 1080
     theme: "dark"
+  - name: "home-idle-rss"
+    title: "RSS headlines"
+    description: "Idle mode can show a rotating headline from your RSS or Atom feeds over the photo, so the living-room screen still has something to read."
+    url: "https://raw.githubusercontent.com/jamesread/biscuittin/main/var/marketing/screenshots/home-idle-rss.png"
+    file: "home-idle-rss.png"
+    width: 1920
+    height: 1080
+    theme: "dark"
   - name: "more"
     title: "More menu"
     description: "Integrations, settings, gamepad info and diagnostics are one button away, and every menu works from the sofa with just a d-pad and two buttons."
     url: "https://raw.githubusercontent.com/jamesread/biscuittin/main/var/marketing/screenshots/more.png"
     file: "more.png"
+    width: 1920
+    height: 1080
+    theme: "dark"
+  - name: "integrations"
+    title: "Integrations"
+    description: "OliveTin actions and Home Assistant automations sit under More, ready to pin as tiles, without leaving the sofa."
+    url: "https://raw.githubusercontent.com/jamesread/biscuittin/main/var/marketing/screenshots/integrations.png"
+    file: "integrations.png"
     width: 1920
     height: 1080
     theme: "dark"

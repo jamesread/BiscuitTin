@@ -12,7 +12,7 @@ image::screenshots/home.png[Home screen]
 == Highlights
 
 * *Built for a TV and a controller.* Big tiles, a clock, and control hints that match whatever you last used: Xbox or PlayStation button glyphs, or keyboard keys.
-* *Launches anything.* Each tile runs a command, detached from BiscuitTin, and the launcher hides while the app is in front. Hold the Guide button to bring it back.
+* *Launches anything.* Each tile runs a command, detached from BiscuitTin, and the launcher hides while the app is in front. Hold the Guide button, or click the tray icon, to bring it back.
 * *Icons without the hassle.* Tiles find their own icons from https://thesvg.org[thesvg.org] by title.
 * *Ambient mode.* When nobody is using it, the tiles fade away to show the photo. See xref:backgrounds.adoc[].
 * *Home automation tiles.* Pin xref:integrations.adoc[OliveTin actions and Home Assistant automations] as tiles.

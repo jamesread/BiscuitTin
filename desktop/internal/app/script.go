@@ -19,7 +19,9 @@ import (
 // blank lines and lines starting with # are ignored:
 //
 //	clock 20:15          show this time instead of the real clock
+//	listen 192.0.2.10:8137  show this host:port on the Settings address row
 //	input xbox           show gamepad hints: xbox, playstation or keyboard
+//	gamepad Xbox 360 Controller  list a pad at rest on Gamepad info
 //	press right          up, down, left, right, select or back
 //	sleep 0.5            wait this many seconds
 //	rss articles.json    show these canned RSS items on the idle screen
@@ -108,12 +110,14 @@ func appendScriptLine(sc *script, path string, n int, line string) error {
 }
 
 var scriptValidators = map[string]func(string) error{
-	"clock": validateClock,
-	"input": validateInput,
-	"press": validatePress,
-	"sleep": validateSleep,
-	"shot":  validateShot,
-	"rss":   validateRSS,
+	"clock":   validateClock,
+	"listen":  validateListen,
+	"input":   validateInput,
+	"press":   validatePress,
+	"sleep":   validateSleep,
+	"shot":    validateShot,
+	"rss":     validateRSS,
+	"gamepad": validateGamepad,
 }
 
 func (st scriptStep) validate() error {
@@ -122,6 +126,13 @@ func (st scriptStep) validate() error {
 		return fmt.Errorf("unknown step %q", st.cmd)
 	}
 	return fn(st.arg)
+}
+
+func validateListen(arg string) error {
+	if arg == "" {
+		return fmt.Errorf("listen needs host:port")
+	}
+	return nil
 }
 
 func validateClock(arg string) error {
@@ -169,6 +180,13 @@ func validateShot(arg string) error {
 	return nil
 }
 
+func validateGamepad(arg string) error {
+	if arg == "" {
+		return fmt.Errorf("gamepad needs a name")
+	}
+	return nil
+}
+
 func validateRSS(arg string) error {
 	if arg == "" {
 		return fmt.Errorf("rss needs a file name")
@@ -201,8 +219,12 @@ func (sc *script) runSteps(u *ui, in *input, ready bool, now float64) (action, b
 }
 
 var scriptInstant = map[string]func(*ui, *input, scriptStep){
-	"clock": func(u *ui, _ *input, st scriptStep) { u.clock = st.arg },
-	"input": func(_ *ui, in *input, st scriptStep) { applyScriptInput(in, st.arg) },
+	"clock":  func(u *ui, _ *input, st scriptStep) { u.clock = st.arg },
+	"listen": func(u *ui, _ *input, st scriptStep) { u.listenAddr = st.arg },
+	"input":  func(_ *ui, in *input, st scriptStep) { applyScriptInput(in, st.arg) },
+	"gamepad": func(u *ui, _ *input, st scriptStep) {
+		u.scriptPads = append(u.scriptPads, scriptGamepad(int32(len(u.scriptPads)), st.arg))
+	},
 }
 
 func applyScriptInput(in *input, arg string) {

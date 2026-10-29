@@ -1,7 +1,8 @@
 = OliveTin and Home Assistant
 
-Each configured integration adds a list under *More > Integrations*.
-Press A on an item to pin or unpin it.
+*More > Integrations* always lists OliveTin and Home Assistant.
+Press A on a configured source's items to pin or unpin them.
+A source with no URL in the config stays in the list, focusable, as *Needs YAML config*.
 
 image::screenshots/integrations.png[Integrations menu with OliveTin and Home Assistant]
 Pinned items become tiles after your configured entries.

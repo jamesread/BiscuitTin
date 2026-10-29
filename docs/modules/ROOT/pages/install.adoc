@@ -53,6 +53,7 @@ flatpak override --user --filesystem=~/Pictures/tv:ro io.github.jamesread.biscui
 | X11, IPC and all devices | To draw the full-screen window with the GPU, and read gamepads.
 | Network | Icons, background images, OliveTin and Home Assistant, and the xref:web-control.adoc[web remote] (which stays off until you switch it on).
 | `org.freedesktop.Flatpak` | BiscuitTin is a launcher: each tile runs its command *on the host*, with `flatpak-spawn --host`.
+| StatusNotifier D-Bus names | Optional tray icon: talk to the watcher and own `org.kde.StatusNotifierItem.*`. Missing a tray is logged and ignored.
 |===
 
 IMPORTANT: The last permission means BiscuitTin can run any command on your computer, outside the sandbox.

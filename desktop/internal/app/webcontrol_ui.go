@@ -6,6 +6,7 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 	pb "github.com/jamesread/biscuittin/gen/biscuittin/v1"
 	"github.com/jamesread/biscuittin/internal/config"
+	"github.com/jamesread/biscuittin/internal/settings"
 	"github.com/jamesread/biscuittin/internal/webcontrol"
 	"go.uber.org/zap"
 	"rsc.io/qr"
@@ -128,13 +129,63 @@ func (u *ui) remoteState(hidden bool) *pb.GetStateResponse {
 	return s
 }
 
-// drawQR draws a QR code for the web remote's URL in the bottom right of the
-// home screen, dark modules on white with the standard 4-module quiet zone.
+func (u *ui) webAddressItem() menuItem {
+	return menuItem{
+		title:    "Address",
+		disabled: true,
+		value:    func() string { return u.webListenLabel() },
+	}
+}
+
+func (u *ui) webListenLabel() string {
+	if u.listenAddr != "" {
+		return u.listenAddr
+	}
+	if u.webURL != "" {
+		return strings.TrimSuffix(strings.TrimPrefix(u.webURL, "http://"), "/")
+	}
+	return webcontrol.ListenAddr(u.webControlCfg())
+}
+
+func (u *ui) webControlCfg() config.WebControlConfig {
+	if u.cfg == nil {
+		return config.WebControlConfig{}
+	}
+	return u.cfg.WebControl
+}
+
+// drawQR draws a QR code for the web remote's URL, dark modules on white
+// with the standard 4-module quiet zone. Menu place is mid-right; idle
+// place is bottom-right, painted after RSS so headlines cannot cover it.
 // qrSide is the QR code's width at 1080p.
 const qrSide = 220
 
+func (u *ui) qrPlace() settings.QRPlace {
+	if u.settings == nil {
+		return settings.QRNone
+	}
+	return u.settings.QRPlace
+}
+
+func (u *ui) qrReservesGrid() bool {
+	return u.webURL != "" && u.qrPlace() == settings.QRMenu
+}
+
 func (u *ui) qrVisible() bool {
-	return u.webURL != "" && u.settings.ShowQR
+	if u.webURL == "" {
+		return false
+	}
+	return u.qrWanted()
+}
+
+func (u *ui) qrWanted() bool {
+	switch u.qrPlace() {
+	case settings.QRMenu:
+		return true
+	case settings.QRIdle:
+		return u.idle || u.bodyAlpha < 1
+	}
+	return false
 }
 
 func (u *ui) ensureQR() bool {
@@ -172,30 +223,56 @@ func (u *ui) paintQRLabels(x0, y0, side, s float32) {
 	label := "Remote control"
 	size := 26 * s
 	m := u.measure(label, size)
-	u.text(label, x0+(side-m.X)/2, y0-size-14*s, size, rl.RayWhite)
 	addr := strings.TrimSuffix(strings.TrimPrefix(u.webURL, "http://"), "/")
 	as := 22 * s
 	am := u.measure(addr, as)
+	if u.qrPlace() == settings.QRIdle {
+		u.text(label, x0+(side-m.X)/2, y0-size-as-24*s, size, rl.RayWhite)
+		u.text(addr, x0+(side-am.X)/2, y0-as-10*s, as, rl.ColorAlpha(rl.RayWhite, 0.85))
+		return
+	}
+	u.text(label, x0+(side-m.X)/2, y0-size-14*s, size, rl.RayWhite)
 	u.text(addr, x0+(side-am.X)/2, y0+side+12*s, as, rl.ColorAlpha(rl.RayWhite, 0.85))
+}
+
+func qrOrigin(place settings.QRPlace, w, h, margin, side float32) (x0, y0 float32) {
+	x0 = w - margin - side
+	if place == settings.QRIdle {
+		return x0, h - margin - side
+	}
+	return x0, (h - side) / 2
 }
 
 func (u *ui) paintQR(w, h, s, margin float32) {
 	const quiet = 4
 	side := qrSide * s
 	cell := side / float32(u.qr.Size+2*quiet)
-	x0 := w - margin - side
-	y0 := (h - side) / 2
+	x0, y0 := qrOrigin(u.qrPlace(), w, h, margin, side)
 	rl.DrawRectangleRounded(rl.Rectangle{X: x0, Y: y0, Width: side, Height: side}, 0.06, 6, u.fa(rl.White))
 	u.paintQRModules(x0, y0, cell, quiet)
 	u.paintQRLabels(x0, y0, side, s)
 }
 
 func (u *ui) drawQR(w, h, s, margin float32) {
-	if !u.qrVisible() {
+	if !u.canDrawQR() {
 		return
 	}
-	if !u.ensureQR() {
-		return
-	}
+	prev := u.drawAlpha
+	u.drawAlpha = u.qrDrawAlpha()
 	u.paintQR(w, h, s, margin)
+	u.drawAlpha = prev
+}
+
+func (u *ui) canDrawQR() bool {
+	if !u.qrVisible() {
+		return false
+	}
+	return u.ensureQR()
+}
+
+func (u *ui) qrDrawAlpha() float32 {
+	if u.qrPlace() == settings.QRIdle {
+		return 1 - u.bodyAlpha
+	}
+	return u.drawAlpha
 }

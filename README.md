@@ -61,7 +61,13 @@ OliveTin actions and Home Assistant automations sit under More, ready to pin as 
 
 ![Settings](var/marketing/screenshots/settings.png)
 
-Change the background photos, image credits, control help and the phone web remote on screen; choices are saved without touching your config file.
+Settings are grouped under titles. Change the photos, RSS headlines, control help and the phone web remote on screen; choices are saved without touching your config file.
+
+### Gamepad info
+
+![Gamepad info](var/marketing/screenshots/gamepads.png)
+
+See which controllers BiscuitTin has found, Xbox and PlayStation alike, with live stick, trigger and button readings to check a pad works before you sit down to play.
 
 Screenshots use fictional test data and are regenerated with `make screenshots`
 (see [`var/marketing/screenshots`](var/marketing/screenshots/README.md)).
@@ -91,7 +97,8 @@ sandbox doesn't limit what entries can do. See the
 | B / Backspace | Back; on the home screen, hide the tiles |
 | Esc | Back in menus; on the home screen, ask to exit |
 | Hold Guide (Xbox button) | Bring the launcher back while an app is running |
-| Ctrl+Q or More > System > Exit | Quit without asking |
+| Click the tray icon | Show the launcher (when a tray is available) |
+| Tray menu Exit, Ctrl+Q or More > System > Exit | Quit without asking |
 
 ## Launching
 
@@ -99,7 +106,8 @@ Apps are started in their own session (`setsid`) with stdin from `/dev/null`
 and output appended to `~/.cache/biscuittin/<title>.log`, so they keep running
 if BiscuitTin exits or is killed. With `hideOnLaunch`, the launcher unmaps
 itself while the app runs and returns when it exits (unless the entry sets
-`restoreOnExit: false`) or when Guide is held.
+`restoreOnExit: false`), when Guide is held, or when the tray icon is clicked.
+If no tray is available at startup, that is logged and ignored.
 
 ## Icons
 
@@ -133,17 +141,19 @@ and is not repeated in the same session. Any key, button or stick movement
 brings the tiles back within a fifth of a second, and that waking input is
 not acted on.
 
-In **More**, "Background images" toggles them and "Next image every" /
-"Next headline every" set the intervals (1 minute to 1 day). Use left/right
-to change a value, or A to cycle it. Choices are saved to
-`~/.local/state/biscuittin/settings.yaml`.
+In **More > Settings**, "Background images" and "RSS headlines" toggle
+those, and "Next image every" / "Next headline every" set the intervals
+(1 minute to 1 day). RSS headlines stay *Needs YAML config* until you add
+`rss.feeds`. Use left/right to change a value, or A to cycle it. Choices are
+saved to `~/.local/state/biscuittin/settings.yaml`.
 
 ## Integrations: OliveTin and Home Assistant
 
-Each configured integration adds a list under **More > Integrations**. Press A on an item to
-pin or unpin it; pinned items become tiles after your configured entries, and
-are saved to `settings.yaml` (with their titles, so tiles appear even when the
-server is down).
+**More > Integrations** always lists OliveTin and Home Assistant. Press A on an
+item to pin or unpin it; pinned items become tiles after your configured
+entries, and are saved to `settings.yaml` (with their titles, so tiles appear
+even when the server is down). A source with no URL stays in the list as
+**Needs YAML config**.
 
 - **OliveTin** (`olivetin.url`): every action you can run, grouped by dashboard
   or host. Tiles call `StartAction` and report finished/failed (exit code).
@@ -163,12 +173,12 @@ Iconify API and cached like other icons.
 
 ## Settings and idle
 
-**More > Settings** has: background images (On/Off), the image interval, image
-attribution (Shown/Hidden) and control help (Shown/Hidden). Two-way choices use
-a radio group, modelled on picocrank's RadioGroup: left/right pick an option,
-A cycles. Pressing B / Backspace on the home screen hides the tiles straight
-away, as if idle (RSS headlines show if feeds are configured); any input
-brings them back. Esc on the home screen asks whether to exit.
+**More > Settings** groups the choices under titles (Backgrounds, RSS, Display,
+Web control). Two-way choices use a radio group, modelled on picocrank's
+RadioGroup: left/right pick an option, A cycles. Pressing B / Backspace on the
+home screen hides the tiles straight away, as if idle (RSS headlines show if
+feeds are configured); any input brings them back. Esc on the home screen
+asks whether to exit.
 
 ## Control help
 
@@ -184,8 +194,9 @@ Web control is **off by default**: nothing listens on the network until you
 switch it on. **More > Settings > Web control** then starts a small web server
 on `0.0.0.0` (port `$PORT`, `webControl.port`, or 8137) serving a
 touch-friendly remote: a d-pad, OK and Back, plus a button per tile. **QR code
-on home screen** (also off by default) shows its address so a phone can scan
-it, only while web control is running. Diagnostics shows the URL.
+on home screen** is *None* by default, or *Main menu* / *Idle screen* so a
+phone can scan the address, only while web control is running. Settings shows
+this machine's LAN IP and port on the Address row. Diagnostics shows the URL.
 
 The page talks to BiscuitTin over ConnectRPC (`protocol/biscuittin/v1/remote.proto`,
 `RemoteService`), so other clients can use the same API. There is no

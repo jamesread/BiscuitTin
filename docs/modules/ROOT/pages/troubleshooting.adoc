@@ -49,7 +49,12 @@ Set `iconQuery`, or `icon` to a PNG. See xref:icons.adoc[].
 
 The launcher doesn't come back after an app exits::
 The command handed off to an already running instance and exited straight away, before the app closed.
-Set `restoreOnExit: false` on that entry, and hold Guide to bring the launcher back.
+Set `restoreOnExit: false` on that entry, and hold Guide or click the tray icon to bring the launcher back.
+
+Logs say "tray unused"::
+There is no StatusNotifier host *and* no XEmbed system tray (`_NET_SYSTEM_TRAY`).
+Polybar, tint2 and similar bars use XEmbed; BiscuitTin falls back to that after StatusNotifier.
+A bare window manager with no tray module is expected to log this, and BiscuitTin keeps running.
 
 "Web control could not start"::
 Another program is using the port. Set `webControl.port` or `$PORT`. See xref:web-control.adoc[].

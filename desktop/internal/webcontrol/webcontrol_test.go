@@ -104,6 +104,14 @@ func TestRemoteServesPage(t *testing.T) {
 	}
 }
 
+func TestListenAddrUsesPort(t *testing.T) {
+	t.Setenv("PORT", "")
+	got := ListenAddr(config.WebControlConfig{Port: 9000})
+	if !strings.HasSuffix(got, ":9000") {
+		t.Fatalf("ListenAddr = %q", got)
+	}
+}
+
 func TestWebControlPort(t *testing.T) {
 	t.Setenv("PORT", "")
 	if p := Port(config.WebControlConfig{}); p != defaultWebPort {

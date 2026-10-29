@@ -84,3 +84,8 @@ linters:
       - text: "G115:"
         linters:
           - gosec
+      # StatusNotifier/dbusmenu structs keep D-Bus signature field order.
+      - path: internal/tray/
+        text: "fieldalignment:"
+        linters:
+          - govet

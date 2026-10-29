@@ -18,6 +18,7 @@ desktop/            the Go app (its own Go module)
     launch/         starts entries as detached processes
     rss/            RSS and Atom fetch, parse and cache
     settings/       choices made on screen, saved to settings.yaml
+    tray/           optional tray icon (StatusNotifier, then XEmbed)
     webcontrol/     web remote server and ConnectRPC API (embeds webdist/)
   gen/              generated from protocol/
 frontend/           web remote (Vue), built into desktop/internal/webcontrol/webdist

@@ -29,7 +29,7 @@ Settings changed on screen are stored separately; see xref:menus.adoc[].
 |===
 | Key | Default | Meaning
 
-| `hideOnLaunch` | `true` | Hide the launcher while a launched app runs.
+| `hideOnLaunch` | `true` | Hide the launcher while a launched app runs. Bring it back with Guide or the tray icon.
 | `restoreHoldSeconds` | `1.0` | How long to hold Guide to bring the launcher back.
 | `logDir` | `cacheDir` | Launched apps write their output to `<logDir>/<entry title>.log`.
 | `cacheDir` | `~/.cache/biscuittin` | Downloaded and rendered icons and images.
@@ -90,7 +90,7 @@ Shown on the idle home screen. See xref:rss.adoc[].
 |===
 | Key | Default | Meaning
 
-| `rss.feeds` | | RSS or Atom URLs. Each item is a URL string or `{url, name}`.
+| `rss.feeds` | | RSS or Atom URLs. Each item is a URL string or `{url, name}`. Without feeds, Settings shows *Needs YAML config*.
 | `rss.interval` | `900` | Seconds between feed refreshes, 60 to 86400.
-| `rss.rotateSeconds` | `60` | Seconds each article stays on screen, 60 to 86400. The on-screen setting takes precedence.
+| `rss.rotateSeconds` | `60` | Seconds each article stays on screen, 60 to 86400. The on-screen setting takes precedence. *More > Settings > RSS headlines* can hide them.
 |===

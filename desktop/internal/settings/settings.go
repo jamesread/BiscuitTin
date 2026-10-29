@@ -29,19 +29,35 @@ type Settings struct {
 	// LegacyOliveTinActions is the pre-Home Assistant name for PinnedActions,
 	// read once and migrated.
 	LegacyOliveTinActions []integrations.PinnedAction `yaml:"olivetinActions,omitempty"`
-	BackgroundInterval    int                         `yaml:"backgroundInterval"`
+	// QRPlace is none, menu (home tiles) or idle. Default none.
+	QRPlace            QRPlace `yaml:"qrPlace"`
+	BackgroundInterval int     `yaml:"backgroundInterval"`
 	// RSSInterval is how long each headline stays on the idle screen.
 	RSSInterval        int  `yaml:"rssInterval"`
 	BackgroundsEnabled bool `yaml:"backgroundsEnabled"`
+	// RSSEnabled shows idle headlines when feeds are configured. Default on.
+	RSSEnabled bool `yaml:"rssEnabled"`
 	// HideAttribution hides the background image credit; HideHelp hides the
 	// control hints in the footer.
 	HideAttribution bool `yaml:"hideAttribution"`
 	HideHelp        bool `yaml:"hideHelp"`
-	// WebControl runs the web remote on 0.0.0.0; ShowQR draws its address as
-	// a QR code on the home screen.
+	// WebControl runs the web remote on 0.0.0.0.
 	WebControl bool `yaml:"webControl"`
-	ShowQR     bool `yaml:"showQR"`
 }
+
+// QRPlace is where the web remote QR is drawn.
+type QRPlace int
+
+const (
+	QRNone QRPlace = iota
+	QRMenu
+	QRIdle
+)
+
+// QRPlaceLabels is the Settings radio order: None, Main menu, Idle screen.
+var QRPlaceLabels = []string{"None", "Main menu", "Idle screen"}
+
+var qrPlaceNames = []string{"none", "menu", "idle"}
 
 func settingsPath() string {
 	dir := os.Getenv("XDG_STATE_HOME")
@@ -58,6 +74,7 @@ func settingsPath() string {
 func defaultSettings(cfg *config.Config) *Settings {
 	return &Settings{
 		BackgroundsEnabled: config.BoolOr(cfg.Backgrounds.Enabled, true),
+		RSSEnabled:         true,
 		BackgroundInterval: cfg.Backgrounds.Interval,
 		RSSInterval:        cfg.RSS.RotateSeconds,
 		File:               settingsPath(),
@@ -71,6 +88,22 @@ func applySaved(s *Settings) {
 	}
 	if err := yaml.Unmarshal(raw, s); err != nil {
 		zap.L().Named("settings").Warn("ignoring unreadable settings", zap.String("path", s.File), zap.Error(err))
+		return
+	}
+	applyLegacyQR(s, raw)
+}
+
+func applyLegacyQR(s *Settings, raw []byte) {
+	var old struct {
+		QRPlace *QRPlace `yaml:"qrPlace"`
+		ShowQR  *bool    `yaml:"showQR"`
+	}
+	_ = yaml.Unmarshal(raw, &old)
+	if old.QRPlace != nil {
+		return
+	}
+	if old.ShowQR != nil && *old.ShowQR {
+		s.QRPlace = QRMenu
 	}
 }
 
@@ -100,7 +133,45 @@ func Load(cfg *config.Config) *Settings {
 	applySaved(s)
 	clampIntervals(s, cfg)
 	migrateLegacyPins(s)
+	normalizeQR(s)
 	return s
+}
+
+func normalizeQR(s *Settings) {
+	if s.QRPlace < QRNone || s.QRPlace > QRIdle {
+		s.QRPlace = QRNone
+	}
+}
+
+func (p QRPlace) MarshalYAML() (any, error) {
+	if p >= QRNone && p <= QRIdle {
+		return qrPlaceNames[p], nil
+	}
+	return qrPlaceNames[QRNone], nil
+}
+
+func (p *QRPlace) UnmarshalYAML(n *yaml.Node) error {
+	var name string
+	if err := n.Decode(&name); err == nil {
+		*p = qrPlaceNamed(name)
+		return nil
+	}
+	var i int
+	if err := n.Decode(&i); err != nil {
+		return err
+	}
+	*p = QRPlace(i)
+	return nil
+}
+
+func qrPlaceNamed(name string) QRPlace {
+	switch name {
+	case "menu":
+		return QRMenu
+	case "idle":
+		return QRIdle
+	}
+	return QRNone
 }
 
 func (s *Settings) Save() error {

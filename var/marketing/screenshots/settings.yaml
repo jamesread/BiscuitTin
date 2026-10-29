@@ -5,7 +5,7 @@ backgroundInterval: 86400
 hideAttribution: false
 hideHelp: false
 webControl: false
-showQR: false
+qrPlace: none
 pinnedActions:
   - source: olivetin
     bindingId: demo-backup-photos

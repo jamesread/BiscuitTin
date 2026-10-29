@@ -67,6 +67,20 @@ type Event struct {
 	Done   bool
 }
 
+// CatalogEntry is a known integration, whether or not it is configured.
+type CatalogEntry struct {
+	ID    string
+	Title string
+}
+
+// Catalog is every integration the Integrations menu lists.
+func Catalog() []CatalogEntry {
+	return []CatalogEntry{
+		{ID: "olivetin", Title: "OliveTin actions"},
+		{ID: "homeassistant", Title: "Home Assistant automations"},
+	}
+}
+
 func NewSources(cfg *config.Config) []Source {
 	var out []Source
 	if cfg.OliveTin.URL != "" {

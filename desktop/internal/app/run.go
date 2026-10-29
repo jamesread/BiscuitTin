@@ -18,6 +18,7 @@ import (
 	"github.com/jamesread/biscuittin/internal/launch"
 	"github.com/jamesread/biscuittin/internal/rss"
 	"github.com/jamesread/biscuittin/internal/settings"
+	"github.com/jamesread/biscuittin/internal/tray"
 	"github.com/jamesread/biscuittin/internal/webcontrol"
 	"go.uber.org/zap"
 )
@@ -73,6 +74,7 @@ type session struct {
 	web           *webcontrol.Server
 	debugBridge   *debugctl.Bridge
 	debugSrv      *debugctl.Server
+	tray          *tray.Host
 	exits         chan launch.Exit
 	started       map[int]time.Time
 	scriptPath    string
@@ -104,6 +106,7 @@ func startSession(cfg *config.Config, opts Options) (*session, error) {
 	s.goIcon(func() { icons.Resolve(cfg, entryKey, s.iconResults) })
 	s.requestActionIcons()
 	s.startDebug()
+	s.startTray()
 	s.lastInput = rl.GetTime()
 	lg().Info("started", zap.Int("entries", len(cfg.Entries)), zap.String("config", opts.ConfigPath))
 	return s, nil
@@ -192,6 +195,10 @@ func (s *session) startDebug() {
 	s.u.debugSocket = debugSrv.Path()
 }
 
+func (s *session) startTray() {
+	s.tray = tray.Start()
+}
+
 func openWindow(cfg *config.Config, size image.Point, fullscreen bool) {
 	rl.SetTraceLogLevel(rl.LogWarning)
 	flags := uint32(rl.FlagVsyncHint | rl.FlagMsaa4xHint)
@@ -206,8 +213,8 @@ func openWindow(cfg *config.Config, size image.Point, fullscreen bool) {
 		m := rl.GetCurrentMonitor()
 		rl.SetWindowSize(rl.GetMonitorWidth(m), rl.GetMonitorHeight(m))
 		rl.ToggleBorderlessWindowed()
-		rl.HideCursor()
 	}
+	rl.InitAudioDevice()
 	rl.SetExitKey(0)
 	rl.SetTargetFPS(60)
 }
@@ -219,7 +226,9 @@ func (s *session) close() {
 	if s.debugSrv != nil {
 		s.debugSrv.Stop()
 	}
+	s.tray.Stop()
 	s.u.unload()
+	rl.CloseAudioDevice()
 	rl.CloseWindow()
 }
 
@@ -280,7 +289,31 @@ func (s *session) tick() (bool, error) {
 	s.requestBackground()
 	s.handleExits()
 	s.syncServers()
+	s.drainTray()
+	if s.u.quit {
+		return true, nil
+	}
 	return s.advanceFrame()
+}
+
+func (s *session) drainTray() {
+	if s.tray == nil {
+		return
+	}
+	ev, ok := tryRecv(s.tray.Events)
+	if !ok {
+		return
+	}
+	s.applyTray(ev)
+}
+
+func (s *session) applyTray(ev tray.Event) {
+	if ev == tray.EventQuit {
+		s.u.quit = true
+		return
+	}
+	s.hideAt = 0
+	s.show()
 }
 
 func (s *session) advanceFrame() (bool, error) {
@@ -499,10 +532,19 @@ func (s *session) handleVisibleFrame() (done bool, err error) {
 		return true, err
 	}
 	a = s.applyIdle(a, remoteTap)
+	syncCursor(s.u.idle)
 	if a == actionQuit {
 		return true, nil
 	}
 	return s.drawAfterAction(a), nil
+}
+
+func syncCursor(idle bool) {
+	if idle {
+		rl.HideCursor()
+		return
+	}
+	rl.ShowCursor()
 }
 
 func (s *session) maybeScript(a action) (action, bool, error) {
@@ -520,6 +562,7 @@ func (s *session) maybeScript(a action) (action, bool, error) {
 }
 
 func (s *session) drawAfterAction(a action) bool {
+	s.u.playAction(a)
 	if s.u.screen != screenHome {
 		s.u.handleMenu(a)
 		if s.u.quit {

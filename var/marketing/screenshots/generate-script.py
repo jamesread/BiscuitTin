@@ -17,6 +17,9 @@ def main():
     cp.read(INI)
     out = ["# Generated from screenshots.ini by generate-script.py."]
     out.append("clock %s" % cp.defaults()["clock"].strip())
+    listen = cp.defaults().get("listen", "").strip()
+    if listen:
+        out.append("listen %s" % listen)
     last_input = None
     for section in cp.sections():
         if not cp.get(section, "title", fallback="").strip():
@@ -30,6 +33,9 @@ def main():
         rss = cp.get(section, "rss", fallback="").strip()
         if rss:
             out.append("rss %s" % (HERE / rss))
+        for pad in cp.get(section, "gamepads", fallback="").split(","):
+            if pad.strip():
+                out.append("gamepad %s" % pad.strip())
         for button in cp.get(section, "steps").replace(",", " ").split():
             out.append("press %s" % button)
         out.append("shot %s" % (HERE / ("%s.png" % name)))

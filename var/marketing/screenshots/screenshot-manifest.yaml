@@ -44,9 +44,17 @@ screenshots:
     theme: "dark"
   - name: "settings"
     title: "Settings"
-    description: "Change the background photos, image credits, control help and the phone web remote on screen; choices are saved without touching your config file."
+    description: "Settings are grouped under titles. Change the photos, RSS headlines, control help and the phone web remote on screen; choices are saved without touching your config file."
     url: "https://raw.githubusercontent.com/jamesread/biscuittin/main/var/marketing/screenshots/settings.png"
     file: "settings.png"
+    width: 1920
+    height: 1080
+    theme: "dark"
+  - name: "gamepads"
+    title: "Gamepad info"
+    description: "See which controllers BiscuitTin has found, Xbox and PlayStation alike, with live stick, trigger and button readings to check a pad works before you sit down to play."
+    url: "https://raw.githubusercontent.com/jamesread/biscuittin/main/var/marketing/screenshots/gamepads.png"
+    file: "gamepads.png"
     width: 1920
     height: 1080
     theme: "dark"

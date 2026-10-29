@@ -5,7 +5,36 @@ import (
 	"time"
 
 	"github.com/jamesread/biscuittin/internal/rss"
+	"github.com/jamesread/biscuittin/internal/settings"
 )
+
+func TestRSSCardLeavesRoomForIdleQR(t *testing.T) {
+	const w, s, margin float32 = 1400, 1, 90
+	u := &ui{
+		settings: &settings.Settings{QRPlace: settings.QRIdle},
+		webURL:   "http://192.0.2.10:8137/",
+		idle:     true,
+	}
+	cardW := rssCardWidth(w, s, margin, u.rssQRReserve(s))
+	qrLeft := w - margin - qrSide*s
+	if cardW <= 0 || margin+cardW > qrLeft-40*s {
+		t.Fatalf("card ends at %v, QR starts at %v", margin+cardW, qrLeft)
+	}
+}
+
+func TestHasRSSHonoursToggle(t *testing.T) {
+	u := &ui{
+		settings: &settings.Settings{RSSEnabled: true},
+		rss:      rss.Static([]rss.Item{{Title: "A"}}),
+	}
+	if !u.hasRSS() {
+		t.Fatal("enabled RSS with items should show")
+	}
+	u.settings.RSSEnabled = false
+	if u.hasRSS() {
+		t.Fatal("RSS headlines Off should hide items")
+	}
+}
 
 func TestPickUnseenRSS(t *testing.T) {
 	items := []rss.Item{

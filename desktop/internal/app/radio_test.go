@@ -19,3 +19,20 @@ func TestRadioGroup(t *testing.T) {
 		t.Fatal("cycle from Hidden should wrap to Shown")
 	}
 }
+
+func TestChoiceRadio(t *testing.T) {
+	i := 0
+	rg := choiceRadio([]string{"None", "Main menu", "Idle screen"}, func() int { return i }, func(n int) { i = n })
+	rg.step(1)
+	if i != 1 {
+		t.Fatalf("right = %d", i)
+	}
+	rg.cycle()
+	if i != 2 {
+		t.Fatalf("cycle = %d", i)
+	}
+	rg.cycle()
+	if i != 0 {
+		t.Fatalf("wrap = %d", i)
+	}
+}

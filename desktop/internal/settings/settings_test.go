@@ -65,6 +65,9 @@ func TestRSSIntervalDefaultsFromConfig(t *testing.T) {
 	if s.RSSInterval != 300 {
 		t.Fatalf("RSSInterval = %d; want config value 300", s.RSSInterval)
 	}
+	if !s.RSSEnabled {
+		t.Fatal("RSS headlines should default on")
+	}
 }
 
 func TestWebControlOffByDefault(t *testing.T) {
@@ -72,7 +75,21 @@ func TestWebControlOffByDefault(t *testing.T) {
 	cfg := &config.Config{}
 	config.ApplyDefaults(cfg)
 	s := Load(cfg)
-	if s.WebControl || s.ShowQR {
-		t.Fatalf("fresh settings: WebControl %v, ShowQR %v; both must default to off", s.WebControl, s.ShowQR)
+	if s.WebControl || s.QRPlace != QRNone {
+		t.Fatalf("fresh settings: WebControl %v, QRPlace %v; both must default to off", s.WebControl, s.QRPlace)
+	}
+}
+
+func TestMigratesLegacyShowQR(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_STATE_HOME", dir)
+	path := filepath.Join(dir, "biscuittin", "settings.yaml")
+	_ = os.MkdirAll(filepath.Dir(path), 0o755)
+	_ = os.WriteFile(path, []byte("showQR: true\n"), 0o644)
+	cfg := &config.Config{}
+	config.ApplyDefaults(cfg)
+	s := Load(cfg)
+	if s.QRPlace != QRMenu {
+		t.Fatalf("showQR true should become menu, got %v", s.QRPlace)
 	}
 }

@@ -11,8 +11,9 @@ Only enable it on a trusted network.
 
 . Open *More > Settings*.
 . Set *Web control* to *On*. The server starts straight away on `0.0.0.0`.
-. Optionally set *QR code on home screen* to *Shown*, so a phone can scan the address.
-  The QR code only appears while web control is running.
+. Then set *QR code on home screen* to *Main menu* or *Idle screen*, so a phone can scan the address.
+  That row stays *Needs web control* until the remote is on. *Idle screen* draws the code bottom-right, above the RSS headlines, when the tiles fade out.
+. *Address* shows this machine's LAN IP and the web remote port.
 
 *More > Diagnostics* shows the address.
 Switching web control off stops the server.

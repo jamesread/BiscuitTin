@@ -8,7 +8,7 @@ image::screenshots/more.png[More menu]
 |===
 | Item | What it does
 
-| Integrations | Lists from xref:integrations.adoc[OliveTin and Home Assistant], to pin as tiles. Shown when one is configured.
+| Integrations | Lists from xref:integrations.adoc[OliveTin and Home Assistant], to pin as tiles. Unconfigured sources stay in the list as *Needs YAML config*.
 | Settings | The settings below.
 | Gamepad info | Each connected gamepad's name, axes and held buttons, live.
 | Diagnostics | Version, display, primary input, paths and integration addresses.
@@ -26,17 +26,21 @@ Both ask first: *Cancel* is selected, then the action.
 
 image::screenshots/settings.png[Settings]
 
-[cols="1,3"]
-|===
-| Setting | Meaning
+Settings are grouped under titles. The titles are not selectable; up and down skip them.
 
-| Background images | Show rotating xref:backgrounds.adoc[background images].
-| Next image every | How often the image changes, from 1 minute to 1 day.
-| Next headline every | How long each RSS article stays on the idle screen, from 1 minute to 1 day.
-| Image attribution | Show the photographer and licence, bottom right.
-| Control help | Show the control hints in the footer.
-| Web control | Run the xref:web-control.adoc[phone web remote]. *Off by default.*
-| QR code on home screen | Show the web remote's address as a QR code. Needs web control on. *Off by default.*
+[cols="1,2,3"]
+|===
+| Group | Setting | Meaning
+
+| Backgrounds | Background images | Show rotating xref:backgrounds.adoc[background images].
+| Backgrounds | Next image every | How often the image changes, from 1 minute to 1 day.
+| Backgrounds | Image attribution | Show the photographer and licence, bottom right.
+| RSS | RSS headlines | Show xref:rss.adoc[idle headlines]. Without `rss.feeds` this row is *Needs YAML config*; with feeds, On or Off (On by default).
+| RSS | Next headline every | How long each RSS article stays on the idle screen, from 1 minute to 1 day.
+| Display | Control help | Show the control hints in the footer.
+| Web control | Web control | Run the xref:web-control.adoc[phone web remote]. *Off by default.*
+| Web control | QR code on home screen | Show the web remote's address as a QR code: *None*, *Main menu* (beside the tiles) or *Idle screen* (bottom right). Without web control this row is *Needs web control*. *None* by default.
+| Web control | Address | This machine's LAN IP and the web remote port, shown even while web control is off.
 |===
 
 Two-way choices are radio groups: left and right pick an option, A cycles round.

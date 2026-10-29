@@ -13,7 +13,9 @@ They are gone again as soon as any input wakes the tiles.
 
 == Configuration
 
-Feeds are off until you add them. Each entry is an `http` or `https` URL, optionally with a display name that overrides the feed's own title.
+Feeds are off until you add them.
+*More > Settings > RSS headlines* is always listed: without feeds it stays focusable as *Needs YAML config*; with feeds it is an On/Off toggle (On by default).
+Each entry is an `http` or `https` URL, optionally with a display name that overrides the feed's own title.
 
 [source,yaml]
 ----
@@ -35,3 +37,4 @@ Fetched XML is cached under `~/.cache/biscuittin/rss/` and reused when a refresh
 *More > Diagnostics* shows how many feeds and articles are loaded.
 
 Leave `feeds` empty (or omit `rss`) to keep the idle screen as the photo only.
+The Settings row then reads *Needs YAML config*.

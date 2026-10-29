@@ -5,6 +5,8 @@ go 1.26.9
 require (
 	connectrpc.com/connect v1.21.1
 	github.com/gen2brain/raylib-go/raylib v0.60.1
+	github.com/godbus/dbus/v5 v5.1.0
+	github.com/jezek/xgb v1.3.1
 	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef
 	go.uber.org/zap v1.28.0

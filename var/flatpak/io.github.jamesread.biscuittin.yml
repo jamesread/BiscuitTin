@@ -17,6 +17,10 @@ finish-args:
   # BiscuitTin is a launcher: entries run on the host via flatpak-spawn
   # --host. This lets it run any host command, by design.
   - --talk-name=org.freedesktop.Flatpak
+  # Optional tray icon (StatusNotifierItem). Startup without a tray is logged
+  # and ignored.
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --own-name=org.kde.StatusNotifierItem.*
 modules:
   - name: biscuittin
     buildsystem: simple

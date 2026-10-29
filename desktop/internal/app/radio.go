@@ -29,6 +29,11 @@ func boolRadio(trueLabel, falseLabel string, get func() bool, set func(bool)) *r
 	}
 }
 
+// choiceRadio binds a radio group to an option index.
+func choiceRadio(options []string, get func() int, set func(int)) *radioGroup {
+	return &radioGroup{options: options, get: get, set: set}
+}
+
 func (rg *radioGroup) step(dir int) {
 	i := clampInt(rg.get()+dir, len(rg.options)-1)
 	if i != rg.get() {

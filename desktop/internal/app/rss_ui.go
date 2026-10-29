@@ -7,12 +7,33 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/jamesread/biscuittin/internal/contrast"
 	"github.com/jamesread/biscuittin/internal/rss"
+	"github.com/jamesread/biscuittin/internal/settings"
 )
 
 const rssSlideSeconds = 0.45
 
 func (u *ui) hasRSS() bool {
-	return u.rss != nil && len(u.rss.Items()) > 0
+	if !u.rssOn() {
+		return false
+	}
+	if u.rss == nil {
+		return false
+	}
+	return len(u.rss.Items()) > 0
+}
+
+func (u *ui) rssOn() bool {
+	if u.settings == nil {
+		return true
+	}
+	return u.settings.RSSEnabled
+}
+
+func (u *ui) rssConfigured() bool {
+	if u.cfg == nil {
+		return false
+	}
+	return len(u.cfg.RSS.Feeds) > 0
 }
 
 func (u *ui) drawRSS(w, h, s, margin float32) {
@@ -80,10 +101,28 @@ func (u *ui) advanceRSSAnim() {
 	}
 }
 
+func rssCardWidth(w, s, margin, reserve float32) float32 {
+	max := w - 2*margin - reserve
+	if max < 0 {
+		return 0
+	}
+	return float32(math.Min(float64(max), float64(1200*s)))
+}
+
+func (u *ui) rssQRReserve(s float32) float32 {
+	if !u.qrVisible() {
+		return 0
+	}
+	if u.qrPlace() != settings.QRIdle {
+		return 0
+	}
+	return qrSide*s + 48*s
+}
+
 func (u *ui) drawRSSCards(w, h, s, margin, alpha float32) {
 	u.drawAlpha = alpha
 	defer func() { u.drawAlpha = u.bodyAlpha }()
-	cardW := float32(math.Min(float64(w-2*margin), float64(1200*s)))
+	cardW := rssCardWidth(w, s, margin, u.rssQRReserve(s))
 	slide := (cardW + 80*s) * (1 - easeInOut(u.rssAnim))
 	if u.rssHavePrev {
 		u.drawRSSCard(u.rssPrev, margin-easeInOut(u.rssAnim)*(cardW+80*s), h, s, cardW)

@@ -65,7 +65,8 @@ It keeps running if BiscuitTin exits or is killed.
 
 With `hideOnLaunch` (the default), the launcher hides while the app runs and comes back when the app exits.
 Set `restoreOnExit: false` on an entry whose command exits straight away.
-Hold the Guide (Xbox) button to bring the launcher back at any time.
+Hold the Guide (Xbox) button, or click the tray icon, to bring the launcher back at any time.
+If the desktop has no StatusNotifier host and no XEmbed tray (polybar, tint2, and similar), startup logs that and continues.
 If a command fails within a few seconds, the launcher comes straight back and shows the error.
 
 While a tile's process is still running, a green dot is shown on that tile.

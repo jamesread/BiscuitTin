@@ -43,6 +43,12 @@ func Port(cfg config.WebControlConfig) int {
 	return defaultWebPort
 }
 
+// ListenAddr is host:port a phone on the LAN should open. Host is the IPv4
+// used for the default route, or the hostname, or localhost.
+func ListenAddr(cfg config.WebControlConfig) string {
+	return net.JoinHostPort(lanAddress(), strconv.Itoa(Port(cfg)))
+}
+
 // Command is input from the web remote, applied on the main thread.
 // Exactly one of the fields is set.
 type Command struct {
@@ -181,7 +187,7 @@ func (wc *Server) Stop() {
 
 // URL is the address a phone on the LAN should open.
 func (wc *Server) URL() string {
-	return fmt.Sprintf("http://%s:%d/", lanAddress(), wc.port)
+	return fmt.Sprintf("http://%s/", ListenAddr(config.WebControlConfig{Port: wc.port}))
 }
 
 // lanAddress finds the IPv4 address used for the default route. Dialling UDP

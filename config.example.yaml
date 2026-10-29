@@ -65,14 +65,15 @@ backgrounds:
 # Web control: a touch-friendly remote served on 0.0.0.0, switched on from
 # More > Settings > Web control (off by default). It has no login: anyone who
 # can reach the port can press buttons and run pinned tiles. The port is
-# $PORT if set, else this, else 8137. "QR code on home screen" shows its
-# address for phones.
+# $PORT if set, else this, else 8137. "QR code on home screen" is None,
+# Main menu or Idle screen.
 webControl:
   port: 8137
 
 # RSS / Atom headlines on the idle home screen. Leave feeds empty to keep the
-# idle screen as the photo only. Each feed is a URL, or {url, name} to set the
-# label shown above the article.
+# idle screen as the photo only; Settings then shows RSS headlines as
+# "Needs YAML config". With feeds, Settings can turn headlines off.
+# Each feed is a URL, or {url, name} to set the label shown above the article.
 # rss:
 #   interval: 900          # refresh feeds, seconds (60 to 86400)
 #   rotateSeconds: 60      # how long each article stays on screen (1 minute to 1 day)
@@ -89,7 +90,8 @@ webControl:
 idleFadeSeconds: 20
 
 # Hide the launcher while a launched app runs. It comes back when the app
-# exits (see restoreOnExit), or when Guide/Home is held on a gamepad.
+# exits (see restoreOnExit), when Guide/Home is held on a gamepad, or when
+# the tray icon is clicked. No tray at startup is logged and ignored.
 hideOnLaunch: true
 restoreHoldSeconds: 1.0
 

@@ -11,7 +11,8 @@ BiscuitTin works with a gamepad, a remote control (most present themselves as a 
 | B or kbd:[Backspace] | Back. On the home screen, hide the tiles.
 | kbd:[Esc] | Back in menus. On the home screen, ask to exit.
 | Hold Guide (Xbox button) | Bring the launcher back while an app is running.
-| kbd:[Ctrl+Q] or *More > System > Exit* | Quit without asking.
+| Click the tray icon | Show the launcher, when a tray is available.
+| Tray menu *Exit*, kbd:[Ctrl+Q] or *More > System > Exit* | Quit without asking.
 |===
 
 == Control help
@@ -33,3 +34,7 @@ kbd:[Esc] on the home screen asks whether to exit.
 
 Any key, button or stick movement brings them back within a fifth of a second.
 That first input only wakes the screen; it doesn't also move or launch anything.
+The mouse pointer is shown while the tiles are up, and hidden when idle.
+
+Moving, confirming and going back play a short, quiet tick. The first input
+that only wakes the idle screen is silent.

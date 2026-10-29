@@ -71,9 +71,12 @@ type ui struct {
 	debugSocket     string
 	configPath      string
 	webURL          string
+	listenAddr      string
+	scriptPads      []gamepadReading
 	rssPrev         rss.Item
 	rssCur          rss.Item
 	font            rl.Font
+	sounds          uiSounds
 	startedAt       time.Time
 	bgTex           uiBackground
 	wantSize        image.Point
@@ -117,6 +120,7 @@ func newUI(cfg *config.Config, settings *settings.Settings) *ui {
 	}
 	u.rebuildTiles()
 	u.glyphs = loadGlyphs()
+	u.sounds = loadSounds()
 
 	u.font = rl.GetFontDefault()
 	if cfg.Font != "" {
@@ -211,7 +215,7 @@ func (u *ui) columns() int {
 	margin := 90 * s
 	gap := 56 * s
 	gridW := w - 2*margin
-	if u.qrVisible() {
+	if u.qrReservesGrid() {
 		gridW -= qrSide*s + 48*s
 	}
 	return columnsFit(u.cfg.Columns, u.tileCount(), gridW, gap, 200*s)
@@ -409,7 +413,7 @@ func (u *ui) homeGrid(w, h, s, margin float32) homeGrid {
 	// Tiles fill the width between the margins, less the QR code's column
 	// when it is shown.
 	gridLeft, gridRight := margin, w-margin
-	if u.qrVisible() {
+	if u.qrReservesGrid() {
 		gridRight -= qrSide*s + 48*s
 	}
 	gridW := gridRight - gridLeft
@@ -461,9 +465,10 @@ func (u *ui) drawHomeTiles(g homeGrid, dt float32) {
 
 func (u *ui) drawHome(w, h, s, margin, dt float32) {
 	u.drawHomeTiles(u.homeGrid(w, h, s, margin), dt)
-	u.drawQR(w, h, s, margin)
 	u.drawRSS(w, h, s, margin)
 	u.drawFooter(w, h, s, margin)
+	// QR last so the idle card and credit cannot paint over it.
+	u.drawQR(w, h, s, margin)
 }
 
 func (u *ui) drawFooter(w, h, s, margin float32) {
@@ -617,6 +622,7 @@ func (u *ui) drawTile(i int, x, y, tw, th, s float32) {
 }
 
 func (u *ui) unload() {
+	u.sounds.unload()
 	u.unloadBackground()
 	for _, t := range u.glyphs {
 		rl.UnloadTexture(t)

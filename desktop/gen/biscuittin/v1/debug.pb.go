@@ -102,7 +102,11 @@ type GetDiagnosticsResponse struct {
 	// home_assistant is the configured Home Assistant URL, empty if unset.
 	HomeAssistant string `protobuf:"bytes,20,opt,name=home_assistant,json=homeAssistant,proto3" json:"home_assistant,omitempty"`
 	// web_control is the web remote URL, or "off".
-	WebControl    string `protobuf:"bytes,21,opt,name=web_control,json=webControl,proto3" json:"web_control,omitempty"`
+	WebControl string `protobuf:"bytes,21,opt,name=web_control,json=webControl,proto3" json:"web_control,omitempty"`
+	// rss is the RSS feed status, e.g. "3 feeds, 42 articles" or "Off".
+	Rss string `protobuf:"bytes,22,opt,name=rss,proto3" json:"rss,omitempty"`
+	// cec is the HDMI-CEC status, e.g. "Off" or "cec-client running".
+	Cec           string `protobuf:"bytes,23,opt,name=cec,proto3" json:"cec,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -280,6 +284,20 @@ func (x *GetDiagnosticsResponse) GetHomeAssistant() string {
 func (x *GetDiagnosticsResponse) GetWebControl() string {
 	if x != nil {
 		return x.WebControl
+	}
+	return ""
+}
+
+func (x *GetDiagnosticsResponse) GetRss() string {
+	if x != nil {
+		return x.Rss
+	}
+	return ""
+}
+
+func (x *GetDiagnosticsResponse) GetCec() string {
+	if x != nil {
+		return x.Cec
 	}
 	return ""
 }
@@ -499,7 +517,7 @@ var File_biscuittin_v1_debug_proto protoreflect.FileDescriptor
 const file_biscuittin_v1_debug_proto_rawDesc = "" +
 	"\n" +
 	"\x19biscuittin/v1/debug.proto\x12\rbiscuittin.v1\"\x17\n" +
-	"\x15GetDiagnosticsRequest\"\xb0\x05\n" +
+	"\x15GetDiagnosticsRequest\"\xd4\x05\n" +
 	"\x16GetDiagnosticsResponse\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12\x16\n" +
 	"\x06commit\x18\x02 \x01(\tR\x06commit\x12\x1d\n" +
@@ -527,7 +545,9 @@ const file_biscuittin_v1_debug_proto_rawDesc = "" +
 	"\bolivetin\x18\x13 \x01(\tR\bolivetin\x12%\n" +
 	"\x0ehome_assistant\x18\x14 \x01(\tR\rhomeAssistant\x12\x1f\n" +
 	"\vweb_control\x18\x15 \x01(\tR\n" +
-	"webControl\"n\n" +
+	"webControl\x12\x10\n" +
+	"\x03rss\x18\x16 \x01(\tR\x03rss\x12\x10\n" +
+	"\x03cec\x18\x17 \x01(\tR\x03cec\"n\n" +
 	"\x06Window\x12\x14\n" +
 	"\x05width\x18\x01 \x01(\x05R\x05width\x12\x16\n" +
 	"\x06height\x18\x02 \x01(\x05R\x06height\x12\x1e\n" +

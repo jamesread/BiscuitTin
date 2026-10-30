@@ -12,9 +12,11 @@ import (
 	"unicode/utf8"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/jamesread/biscuittin/internal/cec"
 	"github.com/jamesread/biscuittin/internal/config"
 	"github.com/jamesread/biscuittin/internal/contrast"
 	"github.com/jamesread/biscuittin/internal/integrations"
+	"github.com/jamesread/biscuittin/internal/padbattery"
 	"github.com/jamesread/biscuittin/internal/rss"
 	"github.com/jamesread/biscuittin/internal/settings"
 	"rsc.io/qr"
@@ -50,10 +52,12 @@ type ui struct {
 	surface         *surfaceTint
 	actionsRunning  map[string]int
 	rss             *rss.Fetcher
+	cec             *cec.Reader
 	lists           map[string]*uiActionList
 	cfg             *config.Config
 	settings        *settings.Settings
 	confirmDo       func()
+	runningSwitch   func()
 	runningKill     func()
 	runningAgain    func()
 	qr              *qr.Code
@@ -84,6 +88,13 @@ type ui struct {
 	wantSize        image.Point
 	confirmBack     screen
 	toastUntil      float64
+	missing         map[string]bool // tile keys whose command isn't installed
+	sleep           sleepTimer
+	batteries       []padbattery.Battery
+	volumeUntil     float64
+	volumeLevel     int
+	volumeMuted     bool
+	volumeKnown     bool
 	menuSel         int
 	rssShownAt      float64
 	selected        int
@@ -100,6 +111,8 @@ type ui struct {
 	rssHavePrev     bool
 	rssHaveCur      bool
 	settingsChanged bool
+	reloadRequested bool
+	arrangeMoving   bool
 	quit            bool
 }
 
@@ -110,9 +123,6 @@ func newUI(cfg *config.Config, settings *settings.Settings) *ui {
 		bodyAlpha:      1,
 		drawAlpha:      1,
 		startedAt:      time.Now(),
-		bg:             contrast.ParseHex(cfg.Background, color.RGBA{20, 22, 31, 255}),
-		accent:         contrast.ParseHex(cfg.Accent, color.RGBA{242, 177, 52, 255}),
-		tileColor:      contrast.AccessibleTileColor(contrast.ParseHex(cfg.TileColor, color.RGBA{61, 90, 128, 255})),
 		icons:          map[string]rl.Texture2D{},
 		scales:         map[string]float32{},
 		pids:           make([][]int, len(cfg.Entries)),
@@ -120,6 +130,7 @@ func newUI(cfg *config.Config, settings *settings.Settings) *ui {
 		sources:        integrations.NewSources(cfg),
 		lists:          map[string]*uiActionList{},
 	}
+	u.applyConfigColors(cfg)
 	u.rebuildTiles()
 	u.glyphs = loadGlyphs()
 	u.sounds = loadSounds()
@@ -156,28 +167,20 @@ func fontCodepoints() []int32 {
 	return out
 }
 
-// rebuildTiles lays out entries, then pinned OliveTin actions, then More.
-// Icons and animation state are keyed by tile, so they survive a rebuild.
+// rebuildTiles lays out entries and pinned actions in the saved order,
+// leaving out hidden ones, then More. Icons and animation state are keyed
+// by tile, so they survive a rebuild.
 func (u *ui) rebuildTiles() {
 	u.tiles = u.tiles[:0]
-	u.appendEntryTiles()
-	u.appendPinnedTiles()
+	for _, t := range u.homeTiles() {
+		if !u.tileHidden(t) {
+			u.tiles = append(u.tiles, t)
+		}
+	}
 	u.tiles = append(u.tiles, tile{kind: tileMore, key: "more", title: "More", subtitle: "Settings and info"})
 	u.resetTileScales()
 	if u.selected >= len(u.tiles) {
 		u.selected = len(u.tiles) - 1
-	}
-}
-
-func (u *ui) appendEntryTiles() {
-	for i, e := range u.cfg.Entries {
-		u.tiles = append(u.tiles, tile{kind: tileEntry, key: entryKey(i), entry: i, title: e.Title, subtitle: e.Subtitle})
-	}
-}
-
-func (u *ui) appendPinnedTiles() {
-	for _, a := range u.settings.PinnedActions {
-		u.tiles = append(u.tiles, tile{kind: tileAction, key: a.Key(), action: a, title: a.Title, subtitle: a.Group})
 	}
 }
 
@@ -206,6 +209,14 @@ func (u *ui) setIcon(key, path string) {
 	u.icons[key] = t
 }
 
+// scale is the window's layout scale times the Interface size setting.
+func (u *ui) scale(w, h float32) float32 {
+	if u.settings == nil {
+		return layoutScale(w, h)
+	}
+	return layoutScale(w, h) * u.settings.InterfaceScale()
+}
+
 func (u *ui) tileCount() int {
 	return len(u.tiles)
 }
@@ -213,7 +224,7 @@ func (u *ui) tileCount() int {
 func (u *ui) columns() int {
 	w := float32(rl.GetScreenWidth())
 	h := float32(rl.GetScreenHeight())
-	s := layoutScale(w, h)
+	s := u.scale(w, h)
 	margin := 90 * s
 	gap := 56 * s
 	gridW := w - 2*margin
@@ -345,13 +356,14 @@ func (u *ui) measure(s string, size float32) rl.Vector2 {
 func (u *ui) draw() {
 	w := float32(rl.GetScreenWidth())
 	h := float32(rl.GetScreenHeight())
-	s := layoutScale(w, h)
+	s := u.scale(w, h)
 	dt := rl.GetFrameTime()
 	u.updateFade(dt)
 	u.drawBackdrop(w, h, dt)
 	margin := 90 * s
 	u.drawHeader(w, s, margin)
 	u.drawBody(w, h, s, margin, dt)
+	u.drawVolume(w, s)
 	u.endFrame()
 }
 
@@ -378,6 +390,11 @@ func (u *ui) drawHeader(w, s, margin float32) {
 	cw := u.measure(clock, clockSize)
 	clockX := w - margin - cw.X
 	padsW := u.drawPadIndicator(clockX-32*s, 68*s, clockSize, s)
+	sleepRight := clockX - 32*s
+	if padsW > 0 {
+		sleepRight = clockX - padsW - 32*s
+	}
+	padsW += u.drawSleepIndicator(sleepRight, 68*s, clockSize*0.6, s)
 	title := u.fitText(u.cfg.Title, titleSize, w-2*margin-cw.X-padsW-40*s)
 	u.text(title, margin, 60*s, titleSize, rl.RayWhite)
 	u.text(clock, clockX, 68*s, clockSize, rl.ColorAlpha(rl.RayWhite, 0.7))
@@ -618,9 +635,30 @@ func (u *ui) paintRunningDot(rect rl.Rectangle, s float32) {
 	rl.DrawCircleV(c, 8*s, u.fa(colorOK))
 }
 
+// focusBorder, focusFill and accentText are the Settings colours, or the
+// accent.
+func (u *ui) focusBorder() rl.Color {
+	return u.settingsColor(func(st *settings.Settings) string { return st.FocusBorder })
+}
+
+func (u *ui) focusFill() rl.Color {
+	return u.settingsColor(func(st *settings.Settings) string { return st.FocusFill })
+}
+
+func (u *ui) accentText() rl.Color {
+	return u.settingsColor(func(st *settings.Settings) string { return st.AccentText })
+}
+
+func (u *ui) settingsColor(pick func(*settings.Settings) string) rl.Color {
+	if u.settings == nil {
+		return u.accent
+	}
+	return contrast.ParseHex(pick(u.settings), u.accent)
+}
+
 func (u *ui) paintTileChrome(tl tile, rect rl.Rectangle, selected bool, s float32) {
 	if selected {
-		rl.DrawRectangleRoundedLinesEx(rect, 0.12, 12, 6*s, u.fa(u.accent))
+		rl.DrawRectangleRoundedLinesEx(rect, 0.12, 12, 6*s, u.fa(u.focusBorder()))
 	}
 	if u.tileRunning(tl) {
 		u.paintRunningDot(rect, s)
@@ -634,10 +672,15 @@ func (u *ui) paintTileSubtitle(subtitle string, cx, ly, labelSize, maxLabel, s f
 	if !selected {
 		return
 	}
+	u.paintTileNote(subtitle, cx, ly, labelSize, maxLabel, s, rl.ColorAlpha(rl.RayWhite, 0.5))
+}
+
+// paintTileNote is the small line under a tile's title.
+func (u *ui) paintTileNote(note string, cx, ly, labelSize, maxLabel, s float32, c rl.Color) {
 	ss := 26 * s
-	fitted := u.fitText(subtitle, ss, maxLabel)
+	fitted := u.fitText(note, ss, maxLabel)
 	sm := u.measure(fitted, ss)
-	u.text(fitted, cx-sm.X/2, ly+labelSize+4*s, ss, rl.ColorAlpha(rl.RayWhite, 0.5))
+	u.text(fitted, cx-sm.X/2, ly+labelSize+4*s, ss, c)
 }
 
 func (u *ui) paintTileLabels(tl tile, cx, y, tw, th, s float32, selected bool) {
@@ -647,6 +690,10 @@ func (u *ui) paintTileLabels(tl tile, cx, y, tw, th, s float32, selected bool) {
 	m := u.measure(title, labelSize)
 	ly := y + th*1.05 + 20*s
 	u.text(title, cx-m.X/2, ly, labelSize, tileLabelColor(selected))
+	if u.tileMissing(tl) {
+		u.paintTileNote("Not installed", cx, ly, labelSize, maxLabel, s, rl.ColorAlpha(colorBad, 0.9))
+		return
+	}
 	u.paintTileSubtitle(tl.subtitle, cx, ly, labelSize, maxLabel, s, selected)
 }
 
@@ -656,8 +703,13 @@ func (u *ui) drawTile(i int, x, y, tw, th, s float32) {
 	cx, cy := x+tw/2, y+th/2
 	rw, rh := tw*sc, th*sc
 	rect := rl.Rectangle{X: cx - rw/2, Y: cy - rh/2, Width: rw, Height: rh}
+	alpha := u.drawAlpha
+	if u.tileMissing(tl) {
+		u.drawAlpha *= 0.4
+	}
 	u.paintTileCard(rect, i == u.selected, s)
 	u.paintTileFace(tl, cx, cy, rw, rh)
+	u.drawAlpha = alpha
 	u.paintTileChrome(tl, rect, i == u.selected, s)
 	u.paintTileLabels(tl, cx, y, tw, th, s, i == u.selected)
 }

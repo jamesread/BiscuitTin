@@ -13,17 +13,20 @@ import (
 )
 
 var screenNames = map[screen]string{
-	screenHome:         "home",
-	screenMore:         "more",
-	screenSettings:     "settings",
-	screenIntegrations: "integrations",
-	screenActionList:   "actions",
-	screenGamepads:     "gamepads",
-	screenDiagnostics:  "diagnostics",
-	screenAudio:        "audio",
-	screenSystem:       "system",
-	screenConfirm:      "confirm",
-	screenRunning:      "running",
+	screenHome:            "home",
+	screenMore:            "more",
+	screenSettings:        "settings",
+	screenIntegrations:    "integrations",
+	screenActionList:      "actions",
+	screenGamepads:        "gamepads",
+	screenDiagnostics:     "diagnostics",
+	screenDiagnosticsMenu: "diagnostics-menu",
+	screenArrange:         "arrange",
+	screenSleep:           "sleep",
+	screenAudio:           "audio",
+	screenSystem:          "system",
+	screenConfirm:         "confirm",
+	screenRunning:         "running",
 }
 
 // syncWebControl starts or stops the web server to match the setting, and
@@ -57,10 +60,16 @@ func syncWebControl(web *webcontrol.Server, enabled bool, cfg *config.Config, br
 	return web, web.URL()
 }
 
-func drainRemote(b *webcontrol.Bridge) {
+// drainRemote discards web remote commands while an app is in front, so
+// stale taps don't fire when the launcher returns. Volume buttons still go
+// to volume, which matters most while something is playing.
+func drainRemote(b *webcontrol.Bridge, volume func(action)) {
 	for {
 		select {
-		case <-b.Commands:
+		case c := <-b.Commands:
+			if a := buttonActions[c.Button]; c.TileKey == "" && isVolume(a) {
+				volume(a)
+			}
 		default:
 			return
 		}
@@ -68,12 +77,14 @@ func drainRemote(b *webcontrol.Bridge) {
 }
 
 var buttonActions = map[pb.Button]action{
-	pb.Button_BUTTON_UP:     actionUp,
-	pb.Button_BUTTON_DOWN:   actionDown,
-	pb.Button_BUTTON_LEFT:   actionLeft,
-	pb.Button_BUTTON_RIGHT:  actionRight,
-	pb.Button_BUTTON_SELECT: actionActivate,
-	pb.Button_BUTTON_BACK:   actionBack,
+	pb.Button_BUTTON_UP:          actionUp,
+	pb.Button_BUTTON_DOWN:        actionDown,
+	pb.Button_BUTTON_LEFT:        actionLeft,
+	pb.Button_BUTTON_RIGHT:       actionRight,
+	pb.Button_BUTTON_SELECT:      actionActivate,
+	pb.Button_BUTTON_BACK:        actionBack,
+	pb.Button_BUTTON_VOLUME_UP:   actionVolumeUp,
+	pb.Button_BUTTON_VOLUME_DOWN: actionVolumeDown,
 }
 
 // nextRemoteAction turns one queued web remote command into an action.
@@ -128,6 +139,50 @@ func (u *ui) remoteState(hidden bool) *pb.GetStateResponse {
 		})
 	}
 	return s
+}
+
+// ensureWebCode makes a pairing code the first time web control is on.
+func (u *ui) ensureWebCode() {
+	if !u.settings.WebControl || u.settings.WebCode != "" {
+		return
+	}
+	u.settings.WebCode = webcontrol.NewCode()
+	u.settingsChanged = true
+}
+
+func (u *ui) webCodeItems() []menuItem {
+	code := menuItem{
+		title:    "Pairing code",
+		disabled: true,
+		value: func() string {
+			if u.settings.WebCode == "" {
+				return "Made when web control is on"
+			}
+			return webcontrol.FormatCode(u.settings.WebCode)
+		},
+	}
+	if u.settings.WebCode == "" {
+		return []menuItem{code}
+	}
+	return []menuItem{code, {title: "New pairing code", open: func() {
+		u.openConfirmFrom(screenSettings, "Unpair every phone and make a new code?", "New code", u.renewWebCode)
+	}}}
+}
+
+func (u *ui) renewWebCode() {
+	u.settings.WebCode = webcontrol.NewCode()
+	u.settingsChanged = true
+	u.openMenu(screenSettings)
+	u.setToast("New pairing code: phones need to scan the QR code again", colorOK, 6)
+}
+
+// qrTarget is the URL in the QR code. The pairing code goes in the
+// fragment, which the page reads and the browser never sends.
+func (u *ui) qrTarget() string {
+	if u.settings == nil || u.settings.WebCode == "" {
+		return u.webURL
+	}
+	return u.webURL + "#code=" + u.settings.WebCode
 }
 
 func (u *ui) webAddressItem() menuItem {
@@ -190,15 +245,16 @@ func (u *ui) qrWanted() bool {
 }
 
 func (u *ui) ensureQR() bool {
-	if u.qrURL == u.webURL {
+	target := u.qrTarget()
+	if u.qr != nil && u.qrURL == target {
 		return true
 	}
-	code, err := qr.Encode(u.webURL, qr.M)
+	code, err := qr.Encode(target, qr.M)
 	if err != nil {
 		lg().Warn("QR code", zap.Error(err))
 		return false
 	}
-	u.qr, u.qrURL = code, u.webURL
+	u.qr, u.qrURL = code, target
 	return true
 }
 

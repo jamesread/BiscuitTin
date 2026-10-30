@@ -7,12 +7,16 @@ import (
 
 // hint is one entry of the control help, e.g. "(A) Launch". pad lists the
 // gamepad glyphs and keys the keyboard keys for the same action; a hint with
-// neither for the current device is skipped.
+// neither for the current device is skipped. padKeys are gamepad buttons
+// with no glyph, drawn as keycaps (Xbox names; PlayStation pads get theirs).
 type hint struct {
-	label string
-	pad   []glyphRole
-	keys  []string
+	label   string
+	pad     []glyphRole
+	padKeys []string
+	keys    []string
 }
+
+var psButtonNames = map[string]string{"LB": "L1", "RB": "R1"}
 
 func backHint() hint {
 	return hint{pad: []glyphRole{glyphBack}, keys: []string{"Esc"}, label: "Back"}
@@ -25,6 +29,7 @@ func homeHints() []hint {
 		{pad: []glyphRole{glyphBack}, label: "Hide"},
 		{keys: []string{"Esc"}, label: "Exit"},
 		{pad: []glyphRole{glyphGuide}, label: "Hold to return from an app"},
+		{padKeys: []string{"LB", "RB"}, keys: []string{"-", "="}, label: "Volume"},
 	}
 }
 
@@ -75,6 +80,9 @@ var screenHints = map[screen]func() []hint{
 
 // hintsFor returns the control help for the current screen.
 func (u *ui) hintsFor() []hint {
+	if u.screen == screenArrange {
+		return u.arrangeHints()
+	}
 	if fn, ok := screenHints[u.screen]; ok {
 		return fn()
 	}
@@ -131,25 +139,35 @@ func (u *ui) appendHint(pieces []hintPiece, hn hint, usePad bool, layout padLayo
 
 func (u *ui) hintRow(hn hint, usePad bool, layout padLayout, size, glyph, s float32) []hintPiece {
 	if usePad {
-		return u.hintPadRow(hn, layout, glyph)
+		return u.hintPadRow(hn, layout, size, glyph, s)
 	}
 	return u.hintKeyRow(hn, size, s)
 }
 
-func (u *ui) hintPadRow(hn hint, layout padLayout, glyph float32) []hintPiece {
+func (u *ui) hintPadRow(hn hint, layout padLayout, size, glyph, s float32) []hintPiece {
 	var row []hintPiece
 	for _, r := range hn.pad {
 		if name := glyphFile(r, layout); u.glyphs[name].ID != 0 {
 			row = append(row, hintPiece{glyph: name, w: glyph})
 		}
 	}
+	for _, k := range hn.padKeys {
+		if ps, ok := psButtonNames[k]; ok && layout == layoutPlayStation {
+			k = ps
+		}
+		row = append(row, u.keycap(k, size, s))
+	}
 	return row
+}
+
+func (u *ui) keycap(k string, size, s float32) hintPiece {
+	return hintPiece{key: k, w: u.measure(k, size*0.85).X + 22*s}
 }
 
 func (u *ui) hintKeyRow(hn hint, size, s float32) []hintPiece {
 	row := make([]hintPiece, 0, len(hn.keys))
 	for _, k := range hn.keys {
-		row = append(row, hintPiece{key: k, w: u.measure(k, size*0.85).X + 22*s})
+		row = append(row, u.keycap(k, size, s))
 	}
 	return row
 }

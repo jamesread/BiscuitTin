@@ -94,6 +94,14 @@ func audioDeviceLabel(ready bool) string {
 	return "Not available (no output device opened)"
 }
 
+func menuSoundsLabel(loaded int, muted bool) string {
+	label := fmt.Sprintf("%d of 3 loaded", loaded)
+	if muted {
+		label += ", off in Settings"
+	}
+	return label
+}
+
 func testSoundLabel(playing bool) string {
 	if playing {
 		return "Playing"
@@ -108,7 +116,7 @@ func (u *ui) audioDiagnostics() []diagRow {
 		{"Sound server", env.soundServer()},
 		{"Runtime dir", env.runtimeDir()},
 		{"Master volume", fmt.Sprintf("%.0f%%", rl.GetMasterVolume()*100)},
-		{"Menu sounds", fmt.Sprintf("%d of 3 loaded", u.sounds.loadedCount())},
+		{"Menu sounds", menuSoundsLabel(u.sounds.loadedCount(), u.menuSoundsMuted())},
 		{"Test sound", testSoundLabel(u.sounds.confirm.FrameCount != 0 && rl.IsSoundPlaying(u.sounds.confirm))},
 	}
 }
@@ -118,7 +126,7 @@ func (u *ui) audioDiagnostics() []diagRow {
 func (u *ui) handleAudio(a action) {
 	switch a {
 	case actionBack, actionExit:
-		u.screen = screenMore
+		u.leaveInfoScreen(a)
 	}
 }
 

@@ -70,4 +70,9 @@ If the desktop has no StatusNotifier host and no XEmbed tray (polybar, tint2, an
 If a command fails within a few seconds, the launcher comes straight back and shows the error.
 
 While a tile's process is still running, a green dot is shown on that tile.
-Launching it again opens a menu: cancel, start another instance, or stop the running process.
+Launching it again opens a menu:
+
+* *Switch to it* brings the app's window to the front and hides the launcher. The window is found by process; Flatpak apps and hand-off launchers like Steam need `windowClass` (see xref:config.adoc[]).
+* *Cancel*.
+* *Start another instance*.
+* *Stop* sends the app SIGTERM, and SIGKILL if it is still running 5 seconds later. In the BiscuitTin Flatpak the second step can't reach the host process, so an app that ignores SIGTERM keeps running.

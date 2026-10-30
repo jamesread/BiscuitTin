@@ -16,9 +16,23 @@ import (
 	"github.com/jamesread/biscuittin/internal/config"
 )
 
+const testCode = "ABCD2345"
+
+// withCode sends a pairing code on every call.
+func withCode(code string) connect.ClientOption {
+	return connect.WithInterceptors(connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+			req.Header().Set(codeHeader, code)
+			return next(ctx, req)
+		}
+	}))
+}
+
 func newTestRemote(t *testing.T) (*Bridge, biscuittinv1connect.RemoteServiceClient, *httptest.Server) {
 	t.Helper()
+	failDelay = 0
 	bridge := NewBridge()
+	bridge.SetCode(testCode)
 	bridge.Publish(&pb.GetStateResponse{
 		Title:  "BiscuitTin on test",
 		Screen: "home",
@@ -26,7 +40,62 @@ func newTestRemote(t *testing.T) (*Bridge, biscuittinv1connect.RemoteServiceClie
 	})
 	srv := httptest.NewServer(newWebControlMux(bridge))
 	t.Cleanup(srv.Close)
-	return bridge, biscuittinv1connect.NewRemoteServiceClient(http.DefaultClient, srv.URL), srv
+	return bridge, biscuittinv1connect.NewRemoteServiceClient(http.DefaultClient, srv.URL, withCode(testCode)), srv
+}
+
+func TestRemoteNeedsPairingCode(t *testing.T) {
+	bridge, _, srv := newTestRemote(t)
+	for _, code := range []string{"", "WRONGCDE"} {
+		client := biscuittinv1connect.NewRemoteServiceClient(http.DefaultClient, srv.URL, withCode(code))
+		_, err := client.PressButton(context.Background(), connect.NewRequest(&pb.PressButtonRequest{Button: pb.Button_BUTTON_UP}))
+		if connect.CodeOf(err) != connect.CodeUnauthenticated {
+			t.Errorf("code %q: err %v; want Unauthenticated", code, err)
+		}
+	}
+	if len(bridge.Commands) != 0 {
+		t.Fatal("an unpaired press was queued")
+	}
+	// Typed codes may be lower case and grouped.
+	client := biscuittinv1connect.NewRemoteServiceClient(http.DefaultClient, srv.URL, withCode("abcd-2345"))
+	if _, err := client.GetState(context.Background(), connect.NewRequest(&pb.GetStateRequest{})); err != nil {
+		t.Fatalf("typed code: %v", err)
+	}
+}
+
+func TestRemoteRefusesAllWithoutCode(t *testing.T) {
+	bridge, _, srv := newTestRemote(t)
+	bridge.SetCode("")
+	client := biscuittinv1connect.NewRemoteServiceClient(http.DefaultClient, srv.URL, withCode(""))
+	if _, err := client.GetState(context.Background(), connect.NewRequest(&pb.GetStateRequest{})); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("no code set: err %v; want Unauthenticated", err)
+	}
+}
+
+func TestRemoteDiagnostics(t *testing.T) {
+	bridge, client, _ := newTestRemote(t)
+	bridge.PublishDiagnostics(&pb.GetDiagnosticsResponse{Version: "1.2.3"})
+	resp, err := client.GetRemoteDiagnostics(context.Background(), connect.NewRequest(&pb.GetRemoteDiagnosticsRequest{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Msg.GetDiagnostics().GetVersion() != "1.2.3" {
+		t.Fatalf("diagnostics = %v", resp.Msg)
+	}
+}
+
+func TestNewCode(t *testing.T) {
+	a, b := NewCode(), NewCode()
+	if len(a) != codeLen || a == b {
+		t.Fatalf("codes %q %q", a, b)
+	}
+	for _, r := range a {
+		if !strings.ContainsRune(codeAlphabet, r) {
+			t.Fatalf("code %q has %q", a, r)
+		}
+	}
+	if FormatCode("ABCD2345") != "ABCD-2345" || NormalizeCode(" abcd-2345 ") != "ABCD2345" {
+		t.Fatal("format / normalize")
+	}
 }
 
 func TestRemoteGetState(t *testing.T) {

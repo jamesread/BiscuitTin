@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"slices"
+	"syscall"
 	"testing"
 	"time"
 
@@ -54,11 +55,13 @@ func testSession(entries []config.Entry) *session {
 		tiles:    []tile{{kind: tileEntry, entry: 0, title: entries[0].Title}},
 	}
 	return &session{
-		cfg:          cfg,
-		u:            u,
-		started:      map[int]time.Time{},
-		exits:        make(chan launch.Exit, 4),
-		hideOnLaunch: false,
+		cfg:              cfg,
+		u:                u,
+		started:          map[int]time.Time{},
+		stopping:         map[int]stopTimer{},
+		installedResults: make(chan installedResult, 2),
+		exits:            make(chan launch.Exit, 4),
+		hideOnLaunch:     false,
 	}
 }
 
@@ -75,7 +78,7 @@ func TestLaunchEntryPromptsWhenPIDAlive(t *testing.T) {
 		t.Fatalf("title %q", s.u.runningTitle)
 	}
 	got := menuTitles(s.u.runningMenu())
-	want := []string{"Cancel", "Start another instance", "Stop"}
+	want := []string{"Switch to it", "Cancel", "Start another instance", "Stop"}
 	if !slices.Equal(got, want) {
 		t.Fatalf("menu = %v; want %v", got, want)
 	}
@@ -86,7 +89,8 @@ func TestLaunchEntryPromptsWhenPIDAlive(t *testing.T) {
 
 func TestRunningMenuCancel(t *testing.T) {
 	s := testSession([]config.Entry{{Title: "Sleep"}})
-	s.u.openRunning("Sleep", func() {}, func() {})
+	s.u.openRunning("Sleep", func() {}, func() {}, func() {})
+	s.u.handleMenu(actionDown)
 	s.u.handleMenu(actionActivate)
 	if s.u.screen != screenHome {
 		t.Fatalf("cancel should return home, screen=%d", s.u.screen)
@@ -126,5 +130,40 @@ func TestLaunchEntryStartsWhenPIDDead(t *testing.T) {
 	}
 	if len(s.u.pids[0]) == 0 {
 		t.Fatal("start should record a pid")
+	}
+}
+
+func TestStopForceKillsAfterDeadline(t *testing.T) {
+	// A shell that ignores SIGTERM, in its own session like launch.Start.
+	cmd := exec.CommandContext(context.Background(), "sh", "-c", `trap "" TERM; while :; do sleep 0.1; done`)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() { _ = cmd.Wait(); close(done) }()
+	t.Cleanup(func() { _ = launch.ForceKill(cmd.Process.Pid); <-done })
+	time.Sleep(100 * time.Millisecond) // let the trap be installed
+
+	s := testSession([]config.Entry{{Title: "Stubborn", Command: []string{"sh"}}})
+	s.u.pids[0] = []int{cmd.Process.Pid}
+	s.killEntry(0)
+	s.checkStopping(time.Now())
+	select {
+	case <-done:
+		t.Fatal("process should have ignored SIGTERM")
+	case <-time.After(200 * time.Millisecond):
+	}
+	if _, ok := s.stopping[cmd.Process.Pid]; !ok {
+		t.Fatal("pid should be waiting for its deadline")
+	}
+	s.checkStopping(time.Now().Add(forceStopAfter + time.Second))
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("process should be force stopped after the deadline")
+	}
+	if s.u.toast != "Force stopped Stubborn" || len(s.stopping) != 0 {
+		t.Fatalf("toast %q, stopping %v", s.u.toast, s.stopping)
 	}
 }

@@ -21,7 +21,7 @@ import (
 //	clock 20:15          show this time instead of the real clock
 //	listen 192.0.2.10:8137  show this host:port on the Settings address row
 //	input xbox           show gamepad hints: xbox, playstation or keyboard
-//	gamepad Xbox 360 Controller  list a pad at rest on Gamepad info
+//	gamepad Xbox 360 Controller  list a pad at rest on Input devices diagnostics
 //	press right          up, down, left, right, select or back
 //	sleep 0.5            wait this many seconds
 //	rss articles.json    show these canned RSS items on the idle screen

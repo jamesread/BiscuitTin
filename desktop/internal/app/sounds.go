@@ -68,7 +68,16 @@ func soundForAction(a action, s uiSounds) rl.Sound {
 }
 
 func (u *ui) playAction(a action) {
+	if u.menuSoundsMuted() && !(u.screen == screenAudio && a == actionActivate) {
+		return
+	}
 	u.playSound(soundForAction(a, u.sounds))
+}
+
+// menuSoundsMuted is the Settings choice; the Audio diagnostics test sound
+// plays regardless.
+func (u *ui) menuSoundsMuted() bool {
+	return u.settings != nil && u.settings.MuteMenuSounds
 }
 
 func (u *ui) playSound(s rl.Sound) {

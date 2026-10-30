@@ -5,6 +5,7 @@ import (
 	"slices"
 	"testing"
 
+	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/jamesread/biscuittin/internal/config"
 	"github.com/jamesread/biscuittin/internal/integrations"
 	"github.com/jamesread/biscuittin/internal/settings"
@@ -84,10 +85,11 @@ func TestSettingsGroupsAndAddress(t *testing.T) {
 	items := u.settingsMenu()
 	got := menuTitles(items)
 	want := []string{
-		"Backgrounds", "Background images", "Next image every", "Image attribution",
+		"Home screen", "Arrange tiles", "Tile order",
+		"Backgrounds", "Background images", "Next image every", "Image attribution", "Image title",
 		"RSS", "RSS headlines", "Next headline every",
-		"Display", "Control help",
-		"Web control", "Web control", "QR code on home screen", "Address",
+		"Display", "Control help", "Menu sounds", "Interface size", "Theme", "Focus border", "Focus background", "Accent text", "Screen off after",
+		"Web control", "Web control", "QR code on home screen", "Address", "Pairing code",
 		"Back",
 	}
 	if !slices.Equal(got, want) {
@@ -106,7 +108,7 @@ func TestOpenSettingsSkipsHeading(t *testing.T) {
 	u := &ui{cfg: &config.Config{}, settings: &settings.Settings{}}
 	u.openMenu(screenSettings)
 	items := u.settingsMenu()
-	if items[u.menuSel].heading || items[u.menuSel].title != "Background images" {
+	if items[u.menuSel].heading || items[u.menuSel].title != "Arrange tiles" {
 		t.Fatalf("sel=%d title=%q", u.menuSel, items[u.menuSel].title)
 	}
 }
@@ -191,7 +193,7 @@ func TestIntegrationsConfiguredOpensList(t *testing.T) {
 func TestSystemMenuItems(t *testing.T) {
 	u := &ui{settings: &settings.Settings{}}
 	got := menuTitles(u.systemMenu())
-	want := []string{"Exit", "Reboot", "Power off", "Back"}
+	want := []string{"Exit", "Reload config", "Suspend", "Reboot", "Power off", "Sleep timer", "When it ends", "Back"}
 	if !slices.Equal(got, want) {
 		t.Fatalf("system menu = %v; want %v", got, want)
 	}
@@ -209,7 +211,7 @@ func TestSystemExitSetsQuit(t *testing.T) {
 func TestRebootAndPoweroffNeedConfirm(t *testing.T) {
 	u := &ui{settings: &settings.Settings{}}
 	u.openMenu(screenSystem)
-	u.menuSel = 1
+	u.menuSel = 3
 	u.handleMenu(actionActivate)
 	if u.screen != screenConfirm || u.menuSel != 0 || u.confirmTitle != "Reboot this machine?" {
 		t.Fatalf("reboot confirm: screen=%d sel=%d title=%q", u.screen, u.menuSel, u.confirmTitle)
@@ -219,7 +221,7 @@ func TestRebootAndPoweroffNeedConfirm(t *testing.T) {
 	}
 
 	u.openMenu(screenSystem)
-	u.menuSel = 2
+	u.menuSel = 4
 	u.handleMenu(actionActivate)
 	if u.screen != screenConfirm || u.menuSel != 0 || u.confirmTitle != "Power off this machine?" {
 		t.Fatalf("poweroff confirm: screen=%d sel=%d title=%q", u.screen, u.menuSel, u.confirmTitle)
@@ -282,7 +284,7 @@ func TestConfirmRunsHostCommand(t *testing.T) {
 
 	u := &ui{settings: &settings.Settings{}}
 	u.openMenu(screenSystem)
-	u.menuSel = 1
+	u.menuSel = 3
 	u.handleMenu(actionActivate)
 	u.menuSel = 1
 	u.handleMenu(actionActivate)
@@ -292,12 +294,25 @@ func TestConfirmRunsHostCommand(t *testing.T) {
 
 	got = nil
 	u.openMenu(screenSystem)
-	u.menuSel = 2
+	u.menuSel = 4
 	u.handleMenu(actionActivate)
 	u.menuSel = 1
 	u.handleMenu(actionActivate)
 	if !slices.Equal(got, []string{"systemctl", "poweroff"}) {
 		t.Fatalf("poweroff ran %v", got)
+	}
+
+	got = nil
+	u.openMenu(screenSystem)
+	u.menuSel = 2
+	u.handleMenu(actionActivate)
+	if u.confirmTitle != "Suspend this machine?" {
+		t.Fatalf("suspend confirm title = %q", u.confirmTitle)
+	}
+	u.menuSel = 1
+	u.handleMenu(actionActivate)
+	if !slices.Equal(got, []string{"systemctl", "suspend"}) || u.screen != screenHome {
+		t.Fatalf("suspend ran %v, screen = %d", got, u.screen)
 	}
 }
 
@@ -314,5 +329,49 @@ func TestConfirmCommandFailureShowsSystem(t *testing.T) {
 	}
 	if u.toast == "" {
 		t.Fatal("failed command should toast")
+	}
+}
+
+func TestDiagnosticsMenuLeavesBackToItem(t *testing.T) {
+	u := &ui{settings: &settings.Settings{}}
+	u.openMenu(screenDiagnosticsMenu)
+	if got := menuTitles(u.diagnosticsMenu()); !slices.Equal(got, []string{"App diagnostics", "Input devices diagnostics", "Audio diagnostics", "Back"}) {
+		t.Fatalf("diagnostics menu = %v", got)
+	}
+	u.handleMenu(actionDown)
+	u.handleMenu(actionActivate)
+	if u.screen != screenGamepads {
+		t.Fatalf("screen = %v, want input devices", u.screen)
+	}
+	u.handleMenu(actionBack)
+	if u.screen != screenDiagnosticsMenu || u.menuSel != 1 {
+		t.Fatalf("screen = %v sel = %d, want diagnostics menu on item 1", u.screen, u.menuSel)
+	}
+}
+
+func TestSettingsColors(t *testing.T) {
+	u := &ui{settings: &settings.Settings{}, accent: rl.Color{R: 242, G: 177, B: 52, A: 255}}
+	items := u.settingsMenu()
+	i := slices.IndexFunc(items, func(it menuItem) bool { return it.title == "Focus border" })
+	if i < 0 || items[i+1].title != "Focus background" {
+		t.Fatalf("settings missing focus colours: %v", menuTitles(items))
+	}
+	if items[i].value() != "Accent" || u.focusBorder() != u.accent {
+		t.Fatalf("focus border should default to the accent, got %q", items[i].value())
+	}
+	adjustMenuItem(items[i], actionRight)
+	if u.settings.FocusBorder != "#ffffff" || items[i].value() != "White" || !u.settingsChanged {
+		t.Fatalf("focus border = %q (%q), changed = %v", u.settings.FocusBorder, items[i].value(), u.settingsChanged)
+	}
+	if u.focusBorder() != (rl.Color{R: 255, G: 255, B: 255, A: 255}) {
+		t.Fatalf("focusBorder() = %v", u.focusBorder())
+	}
+	if u.focusFill() != u.accent || u.accentText() != u.accent {
+		t.Fatal("focus background and accent text should be unchanged")
+	}
+	adjustMenuItem(items[i+2], actionLeft)
+	adjustMenuItem(items[i+2], actionRight)
+	if items[i+2].title != "Accent text" || u.settings.AccentText != "#ffffff" || u.accentText() != (rl.Color{R: 255, G: 255, B: 255, A: 255}) {
+		t.Fatalf("accent text = %q", u.settings.AccentText)
 	}
 }

@@ -41,6 +41,9 @@ const (
 	// RemoteServiceActivateTileProcedure is the fully-qualified name of the RemoteService's
 	// ActivateTile RPC.
 	RemoteServiceActivateTileProcedure = "/biscuittin.v1.RemoteService/ActivateTile"
+	// RemoteServiceGetRemoteDiagnosticsProcedure is the fully-qualified name of the RemoteService's
+	// GetRemoteDiagnostics RPC.
+	RemoteServiceGetRemoteDiagnosticsProcedure = "/biscuittin.v1.RemoteService/GetRemoteDiagnostics"
 )
 
 // RemoteServiceClient is a client for the biscuittin.v1.RemoteService service.
@@ -54,6 +57,9 @@ type RemoteServiceClient interface {
 	// ActivateTile selects a home screen tile and activates it (launching an
 	// app, running a pinned action, or opening More).
 	ActivateTile(context.Context, *connect.Request[v1.ActivateTileRequest]) (*connect.Response[v1.ActivateTileResponse], error)
+	// GetRemoteDiagnostics returns the same facts as the local debug socket, for
+	// copying into a bug report from a phone.
+	GetRemoteDiagnostics(context.Context, *connect.Request[v1.GetRemoteDiagnosticsRequest]) (*connect.Response[v1.GetRemoteDiagnosticsResponse], error)
 }
 
 // NewRemoteServiceClient constructs a client for the biscuittin.v1.RemoteService service. By
@@ -85,14 +91,21 @@ func NewRemoteServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(remoteServiceMethods.ByName("ActivateTile")),
 			connect.WithClientOptions(opts...),
 		),
+		getRemoteDiagnostics: connect.NewClient[v1.GetRemoteDiagnosticsRequest, v1.GetRemoteDiagnosticsResponse](
+			httpClient,
+			baseURL+RemoteServiceGetRemoteDiagnosticsProcedure,
+			connect.WithSchema(remoteServiceMethods.ByName("GetRemoteDiagnostics")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // remoteServiceClient implements RemoteServiceClient.
 type remoteServiceClient struct {
-	getState     *connect.Client[v1.GetStateRequest, v1.GetStateResponse]
-	pressButton  *connect.Client[v1.PressButtonRequest, v1.PressButtonResponse]
-	activateTile *connect.Client[v1.ActivateTileRequest, v1.ActivateTileResponse]
+	getState             *connect.Client[v1.GetStateRequest, v1.GetStateResponse]
+	pressButton          *connect.Client[v1.PressButtonRequest, v1.PressButtonResponse]
+	activateTile         *connect.Client[v1.ActivateTileRequest, v1.ActivateTileResponse]
+	getRemoteDiagnostics *connect.Client[v1.GetRemoteDiagnosticsRequest, v1.GetRemoteDiagnosticsResponse]
 }
 
 // GetState calls biscuittin.v1.RemoteService.GetState.
@@ -110,6 +123,11 @@ func (c *remoteServiceClient) ActivateTile(ctx context.Context, req *connect.Req
 	return c.activateTile.CallUnary(ctx, req)
 }
 
+// GetRemoteDiagnostics calls biscuittin.v1.RemoteService.GetRemoteDiagnostics.
+func (c *remoteServiceClient) GetRemoteDiagnostics(ctx context.Context, req *connect.Request[v1.GetRemoteDiagnosticsRequest]) (*connect.Response[v1.GetRemoteDiagnosticsResponse], error) {
+	return c.getRemoteDiagnostics.CallUnary(ctx, req)
+}
+
 // RemoteServiceHandler is an implementation of the biscuittin.v1.RemoteService service.
 type RemoteServiceHandler interface {
 	// GetState returns what is on screen, so the remote can show the tiles and
@@ -121,6 +139,9 @@ type RemoteServiceHandler interface {
 	// ActivateTile selects a home screen tile and activates it (launching an
 	// app, running a pinned action, or opening More).
 	ActivateTile(context.Context, *connect.Request[v1.ActivateTileRequest]) (*connect.Response[v1.ActivateTileResponse], error)
+	// GetRemoteDiagnostics returns the same facts as the local debug socket, for
+	// copying into a bug report from a phone.
+	GetRemoteDiagnostics(context.Context, *connect.Request[v1.GetRemoteDiagnosticsRequest]) (*connect.Response[v1.GetRemoteDiagnosticsResponse], error)
 }
 
 // NewRemoteServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -148,6 +169,12 @@ func NewRemoteServiceHandler(svc RemoteServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(remoteServiceMethods.ByName("ActivateTile")),
 		connect.WithHandlerOptions(opts...),
 	)
+	remoteServiceGetRemoteDiagnosticsHandler := connect.NewUnaryHandler(
+		RemoteServiceGetRemoteDiagnosticsProcedure,
+		svc.GetRemoteDiagnostics,
+		connect.WithSchema(remoteServiceMethods.ByName("GetRemoteDiagnostics")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/biscuittin.v1.RemoteService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case RemoteServiceGetStateProcedure:
@@ -156,6 +183,8 @@ func NewRemoteServiceHandler(svc RemoteServiceHandler, opts ...connect.HandlerOp
 			remoteServicePressButtonHandler.ServeHTTP(w, r)
 		case RemoteServiceActivateTileProcedure:
 			remoteServiceActivateTileHandler.ServeHTTP(w, r)
+		case RemoteServiceGetRemoteDiagnosticsProcedure:
+			remoteServiceGetRemoteDiagnosticsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -175,4 +204,8 @@ func (UnimplementedRemoteServiceHandler) PressButton(context.Context, *connect.R
 
 func (UnimplementedRemoteServiceHandler) ActivateTile(context.Context, *connect.Request[v1.ActivateTileRequest]) (*connect.Response[v1.ActivateTileResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("biscuittin.v1.RemoteService.ActivateTile is not implemented"))
+}
+
+func (UnimplementedRemoteServiceHandler) GetRemoteDiagnostics(context.Context, *connect.Request[v1.GetRemoteDiagnosticsRequest]) (*connect.Response[v1.GetRemoteDiagnosticsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("biscuittin.v1.RemoteService.GetRemoteDiagnostics is not implemented"))
 }

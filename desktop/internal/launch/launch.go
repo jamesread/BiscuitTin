@@ -103,6 +103,17 @@ func Kill(pid int) error {
 	return syscall.Kill(pid, syscall.SIGTERM)
 }
 
+// ForceKill is Kill with SIGKILL, for a process that ignored SIGTERM.
+func ForceKill(pid int) error {
+	if pid <= 0 {
+		return fmt.Errorf("invalid pid %d", pid)
+	}
+	if err := syscall.Kill(-pid, syscall.SIGKILL); err == nil {
+		return nil
+	}
+	return syscall.Kill(pid, syscall.SIGKILL)
+}
+
 // Host builds a command that runs on the host. Inside the Flatpak sandbox
 // that is flatpak-spawn --host, the same as launched entries.
 func Host(args []string) *exec.Cmd {

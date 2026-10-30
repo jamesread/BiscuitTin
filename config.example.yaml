@@ -70,6 +70,28 @@ backgrounds:
 webControl:
   port: 8137
 
+# More > Settings > Screen off after blacks out the screen after that long
+# without input, and runs offCommand; the next press runs onCommand. Use []
+# to only black out the window (e.g. on Wayland, or set your compositor's
+# command instead).
+# screenOff:
+#   offCommand: [xset, dpms, force, off]
+#   onCommand: [xset, dpms, force, on]
+
+# LB / RB (and - / =) change the volume. The defaults use PipeWire's wpctl;
+# for PulseAudio, for example:
+# volume:
+#   upCommand: [pactl, set-sink-volume, "@DEFAULT_SINK@", +5%]
+#   downCommand: [pactl, set-sink-volume, "@DEFAULT_SINK@", -5%]
+#   getCommand: [sh, -c, 'pactl get-sink-volume @DEFAULT_SINK@ | grep -o "[0-9]*%" | head -1']
+
+# TV remote buttons over HDMI-CEC, for libCEC adapters such as Pulse-Eight
+# (install cec-client on the host). Kernel CEC drivers already show the TV
+# remote as a keyboard and need nothing here.
+# cec:
+#   enabled: true
+#   command: [cec-client, -d, "16", -t, p, -o, BiscuitTin]
+
 # RSS / Atom headlines on the idle home screen. Leave feeds empty to keep the
 # idle screen as the photo only; Settings then shows RSS headlines as
 # "Needs YAML config". With feeds, Settings can turn headlines off.
@@ -112,3 +134,6 @@ entries:
     # When the Steam client is already running, `steam` hands off to it and
     # exits straight away, so don't treat that exit as "Steam closed".
     restoreOnExit: false
+    # Steam's window belongs to the running client, not this command, so
+    # Switch to it finds it by WM_CLASS (see `xprop WM_CLASS`).
+    windowClass: steam

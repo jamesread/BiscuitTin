@@ -3,12 +3,13 @@
 /* eslint-disable */
 
 import { enumDesc, fileDesc, messageDesc, serviceDesc, tsEnum } from "@bufbuild/protobuf/codegenv2";
+import { file_biscuittin_v1_debug } from "./debug_pb";
 
 /**
  * Describes the file biscuittin/v1/remote.proto.
  */
 export const file_biscuittin_v1_remote = /*@__PURE__*/
-  fileDesc("ChpiaXNjdWl0dGluL3YxL3JlbW90ZS5wcm90bxINYmlzY3VpdHRpbi52MSIRCg9HZXRTdGF0ZVJlcXVlc3QiVwoEVGlsZRILCgNrZXkYASABKAkSDQoFdGl0bGUYAiABKAkSEAoIc3VidGl0bGUYAyABKAkSEAoIc2VsZWN0ZWQYBCABKAgSDwoHcnVubmluZxgFIAEoCCJ2ChBHZXRTdGF0ZVJlc3BvbnNlEg0KBXRpdGxlGAEgASgJEiIKBXRpbGVzGAIgAygLMhMuYmlzY3VpdHRpbi52MS5UaWxlEg4KBnNjcmVlbhgDIAEoCRIOCgZoaWRkZW4YBCABKAgSDwoHbWVzc2FnZRgFIAEoCSI7ChJQcmVzc0J1dHRvblJlcXVlc3QSJQoGYnV0dG9uGAEgASgOMhUuYmlzY3VpdHRpbi52MS5CdXR0b24iFQoTUHJlc3NCdXR0b25SZXNwb25zZSIiChNBY3RpdmF0ZVRpbGVSZXF1ZXN0EgsKA2tleRgBIAEoCSIWChRBY3RpdmF0ZVRpbGVSZXNwb25zZSqHAQoGQnV0dG9uEhYKEkJVVFRPTl9VTlNQRUNJRklFRBAAEg0KCUJVVFRPTl9VUBABEg8KC0JVVFRPTl9ET1dOEAISDwoLQlVUVE9OX0xFRlQQAxIQCgxCVVRUT05fUklHSFQQBBIRCg1CVVRUT05fU0VMRUNUEAUSDwoLQlVUVE9OX0JBQ0sQBjKLAgoNUmVtb3RlU2VydmljZRJLCghHZXRTdGF0ZRIeLmJpc2N1aXR0aW4udjEuR2V0U3RhdGVSZXF1ZXN0Gh8uYmlzY3VpdHRpbi52MS5HZXRTdGF0ZVJlc3BvbnNlElQKC1ByZXNzQnV0dG9uEiEuYmlzY3VpdHRpbi52MS5QcmVzc0J1dHRvblJlcXVlc3QaIi5iaXNjdWl0dGluLnYxLlByZXNzQnV0dG9uUmVzcG9uc2USVwoMQWN0aXZhdGVUaWxlEiIuYmlzY3VpdHRpbi52MS5BY3RpdmF0ZVRpbGVSZXF1ZXN0GiMuYmlzY3VpdHRpbi52MS5BY3RpdmF0ZVRpbGVSZXNwb25zZUJAWj5naXRodWIuY29tL2phbWVzcmVhZC9iaXNjdWl0dGluL2dlbi9iaXNjdWl0dGluL3YxO2Jpc2N1aXR0aW52MWIGcHJvdG8z");
+  fileDesc("ChpiaXNjdWl0dGluL3YxL3JlbW90ZS5wcm90bxINYmlzY3VpdHRpbi52MSIRCg9HZXRTdGF0ZVJlcXVlc3QiVwoEVGlsZRILCgNrZXkYASABKAkSDQoFdGl0bGUYAiABKAkSEAoIc3VidGl0bGUYAyABKAkSEAoIc2VsZWN0ZWQYBCABKAgSDwoHcnVubmluZxgFIAEoCCJ2ChBHZXRTdGF0ZVJlc3BvbnNlEg0KBXRpdGxlGAEgASgJEiIKBXRpbGVzGAIgAygLMhMuYmlzY3VpdHRpbi52MS5UaWxlEg4KBnNjcmVlbhgDIAEoCRIOCgZoaWRkZW4YBCABKAgSDwoHbWVzc2FnZRgFIAEoCSI7ChJQcmVzc0J1dHRvblJlcXVlc3QSJQoGYnV0dG9uGAEgASgOMhUuYmlzY3VpdHRpbi52MS5CdXR0b24iFQoTUHJlc3NCdXR0b25SZXNwb25zZSIiChNBY3RpdmF0ZVRpbGVSZXF1ZXN0EgsKA2tleRgBIAEoCSIWChRBY3RpdmF0ZVRpbGVSZXNwb25zZSIdChtHZXRSZW1vdGVEaWFnbm9zdGljc1JlcXVlc3QiWgocR2V0UmVtb3RlRGlhZ25vc3RpY3NSZXNwb25zZRI6CgtkaWFnbm9zdGljcxgBIAEoCzIlLmJpc2N1aXR0aW4udjEuR2V0RGlhZ25vc3RpY3NSZXNwb25zZSq1AQoGQnV0dG9uEhYKEkJVVFRPTl9VTlNQRUNJRklFRBAAEg0KCUJVVFRPTl9VUBABEg8KC0JVVFRPTl9ET1dOEAISDwoLQlVUVE9OX0xFRlQQAxIQCgxCVVRUT05fUklHSFQQBBIRCg1CVVRUT05fU0VMRUNUEAUSDwoLQlVUVE9OX0JBQ0sQBhIUChBCVVRUT05fVk9MVU1FX1VQEAcSFgoSQlVUVE9OX1ZPTFVNRV9ET1dOEAgy/AIKDVJlbW90ZVNlcnZpY2USSwoIR2V0U3RhdGUSHi5iaXNjdWl0dGluLnYxLkdldFN0YXRlUmVxdWVzdBofLmJpc2N1aXR0aW4udjEuR2V0U3RhdGVSZXNwb25zZRJUCgtQcmVzc0J1dHRvbhIhLmJpc2N1aXR0aW4udjEuUHJlc3NCdXR0b25SZXF1ZXN0GiIuYmlzY3VpdHRpbi52MS5QcmVzc0J1dHRvblJlc3BvbnNlElcKDEFjdGl2YXRlVGlsZRIiLmJpc2N1aXR0aW4udjEuQWN0aXZhdGVUaWxlUmVxdWVzdBojLmJpc2N1aXR0aW4udjEuQWN0aXZhdGVUaWxlUmVzcG9uc2USbwoUR2V0UmVtb3RlRGlhZ25vc3RpY3MSKi5iaXNjdWl0dGluLnYxLkdldFJlbW90ZURpYWdub3N0aWNzUmVxdWVzdBorLmJpc2N1aXR0aW4udjEuR2V0UmVtb3RlRGlhZ25vc3RpY3NSZXNwb25zZUJAWj5naXRodWIuY29tL2phbWVzcmVhZC9iaXNjdWl0dGluL2dlbi9iaXNjdWl0dGluL3YxO2Jpc2N1aXR0aW52MWIGcHJvdG8z", [file_biscuittin_v1_debug]);
 
 /**
  * Describes the message biscuittin.v1.GetStateRequest.
@@ -60,6 +61,20 @@ export const ActivateTileResponseSchema = /*@__PURE__*/
   messageDesc(file_biscuittin_v1_remote, 6);
 
 /**
+ * Describes the message biscuittin.v1.GetRemoteDiagnosticsRequest.
+ * Use `create(GetRemoteDiagnosticsRequestSchema)` to create a new message.
+ */
+export const GetRemoteDiagnosticsRequestSchema = /*@__PURE__*/
+  messageDesc(file_biscuittin_v1_remote, 7);
+
+/**
+ * Describes the message biscuittin.v1.GetRemoteDiagnosticsResponse.
+ * Use `create(GetRemoteDiagnosticsResponseSchema)` to create a new message.
+ */
+export const GetRemoteDiagnosticsResponseSchema = /*@__PURE__*/
+  messageDesc(file_biscuittin_v1_remote, 8);
+
+/**
  * Describes the enum biscuittin.v1.Button.
  */
 export const ButtonSchema = /*@__PURE__*/
@@ -75,7 +90,9 @@ export const Button = /*@__PURE__*/
 
 /**
  * RemoteService lets a phone or tablet drive BiscuitTin like a gamepad, over
- * the "web control" server (More > Settings > Web control).
+ * the "web control" server (More > Settings > Web control). Every call needs
+ * the pairing code in the X-Biscuittin-Code header; without it the call
+ * fails with Unauthenticated.
  *
  * @generated from service biscuittin.v1.RemoteService
  */

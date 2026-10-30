@@ -4,8 +4,12 @@ package biscuittin.v1;
 
 option go_package = "github.com/jamesread/biscuittin/gen/biscuittin/v1;biscuittinv1";
 
+import "biscuittin/v1/debug.proto";
+
 // RemoteService lets a phone or tablet drive BiscuitTin like a gamepad, over
-// the "web control" server (More > Settings > Web control).
+// the "web control" server (More > Settings > Web control). Every call needs
+// the pairing code in the X-Biscuittin-Code header; without it the call
+// fails with Unauthenticated.
 service RemoteService {
   // GetState returns what is on screen, so the remote can show the tiles and
   // which one is selected.
@@ -18,6 +22,10 @@ service RemoteService {
   // ActivateTile selects a home screen tile and activates it (launching an
   // app, running a pinned action, or opening More).
   rpc ActivateTile(ActivateTileRequest) returns (ActivateTileResponse);
+
+  // GetRemoteDiagnostics returns the same facts as the local debug socket, for
+  // copying into a bug report from a phone.
+  rpc GetRemoteDiagnostics(GetRemoteDiagnosticsRequest) returns (GetRemoteDiagnosticsResponse);
 }
 
 // Button is a remote control button.
@@ -31,6 +39,10 @@ enum Button {
   BUTTON_SELECT = 5;
   // BUTTON_BACK is B / Esc.
   BUTTON_BACK = 6;
+  // BUTTON_VOLUME_UP and BUTTON_VOLUME_DOWN run volume.upCommand and
+  // volume.downCommand, as LB and RB do.
+  BUTTON_VOLUME_UP = 7;
+  BUTTON_VOLUME_DOWN = 8;
 }
 
 message GetStateRequest {}
@@ -69,3 +81,9 @@ message ActivateTileRequest {
 }
 
 message ActivateTileResponse {}
+
+message GetRemoteDiagnosticsRequest {}
+
+message GetRemoteDiagnosticsResponse {
+  GetDiagnosticsResponse diagnostics = 1;
+}

@@ -40,8 +40,8 @@ const (
 
 // DebugServiceClient is a client for the biscuittin.v1.DebugService service.
 type DebugServiceClient interface {
-	// GetDiagnostics returns the facts shown on More > Diagnostics, plus
-	// window and monitor sizes.
+	// GetDiagnostics returns the facts shown on More > Diagnostics > App
+	// diagnostics, plus window and monitor sizes.
 	GetDiagnostics(context.Context, *connect.Request[v1.GetDiagnosticsRequest]) (*connect.Response[v1.GetDiagnosticsResponse], error)
 }
 
@@ -77,8 +77,8 @@ func (c *debugServiceClient) GetDiagnostics(ctx context.Context, req *connect.Re
 
 // DebugServiceHandler is an implementation of the biscuittin.v1.DebugService service.
 type DebugServiceHandler interface {
-	// GetDiagnostics returns the facts shown on More > Diagnostics, plus
-	// window and monitor sizes.
+	// GetDiagnostics returns the facts shown on More > Diagnostics > App
+	// diagnostics, plus window and monitor sizes.
 	GetDiagnostics(context.Context, *connect.Request[v1.GetDiagnosticsRequest]) (*connect.Response[v1.GetDiagnosticsResponse], error)
 }
 

@@ -43,6 +43,7 @@ func (u *ui) diagnostics() []diagRow {
 		{"Web control", webControlLabel(u.webURL)},
 		{"Debug", debugSocketLabel(u.debugSocket)},
 		{"RSS", u.rss.Status()},
+		{"HDMI-CEC", u.cec.Status()},
 	}
 }
 
@@ -126,6 +127,8 @@ func (u *ui) debugSnapshot(hidden bool) *pb.GetDiagnosticsResponse {
 		Olivetin:      u.cfg.OliveTin.URL,
 		HomeAssistant: u.cfg.HomeAssistant.URL,
 		WebControl:    webControlLabel(u.webURL),
+		Rss:           u.rss.Status(),
+		Cec:           u.cec.Status(),
 	}
 }
 

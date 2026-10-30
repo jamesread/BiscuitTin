@@ -51,14 +51,13 @@ func picsumLastErr(err error) error {
 func (p *picsumProvider) trySize(ph picsumPhoto, dim Size, credit string) (string, error) {
 	path := filepath.Join(p.dir, fmt.Sprintf("picsum-%s-%dx%d.jpg", ph.ID, dim.W, dim.H))
 	url := fmt.Sprintf(p.imageURLFmt(), ph.ID, dim.W, dim.H)
-	if err := download(p.client, url, path, credit); err != nil {
+	if err := download(p.client, url, path, credit, ""); err != nil {
 		lg().Warn("picsum size failed", zap.Int("w", dim.W), zap.Int("h", dim.H), zap.Error(err))
 		return "", err
 	}
 	if _, err := decodeRGBA(path); err != nil {
 		lg().Warn("picsum image unreadable", zap.String("path", path), zap.Error(err))
-		_ = os.Remove(path)
-		_ = os.Remove(path + ".credit")
+		removeImage(path)
 		return "", err
 	}
 	return path, nil

@@ -70,3 +70,27 @@ func TestQROriginIdleBottomRight(t *testing.T) {
 		t.Fatalf("menu y %v", mid)
 	}
 }
+
+func TestWebCodeMadeWhenWebControlOn(t *testing.T) {
+	u := &ui{settings: &settings.Settings{}, webURL: "http://192.0.2.10:8137/"}
+	u.ensureWebCode()
+	if u.settings.WebCode != "" {
+		t.Fatal("code made with web control off")
+	}
+	u.settings.WebControl = true
+	u.ensureWebCode()
+	code := u.settings.WebCode
+	if len(code) != 8 || !u.settingsChanged {
+		t.Fatalf("code = %q changed = %v", code, u.settingsChanged)
+	}
+	if got := u.qrTarget(); got != "http://192.0.2.10:8137/#code="+code {
+		t.Fatalf("QR target = %q", got)
+	}
+	if titles := menuTitles(u.webCodeItems()); len(titles) != 2 || titles[1] != "New pairing code" {
+		t.Fatalf("code items = %v", titles)
+	}
+	u.renewWebCode()
+	if u.settings.WebCode == code || u.screen != screenSettings {
+		t.Fatalf("renew: code %q screen %d", u.settings.WebCode, u.screen)
+	}
+}

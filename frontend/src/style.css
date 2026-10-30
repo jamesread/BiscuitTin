@@ -28,6 +28,20 @@
 	margin: 0 auto;
 }
 
+.volume {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.6em;
+	max-width: 22em;
+	margin: 0.6em auto 0;
+}
+
+.volume button {
+	min-height: 3.5em;
+	font-size: 1.2em;
+	touch-action: manipulation;
+}
+
 .tiles {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(9em, 1fr));
@@ -47,4 +61,26 @@
 
 .status .error {
 	color: var(--error-color, #ff6e64);
+}
+
+.pair input {
+	display: block;
+	width: 100%;
+	max-width: 22em;
+	font-size: 1.6em;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	margin: 0.5em 0;
+}
+
+.pair .error {
+	color: var(--error-color, #ff6e64);
+}
+
+.diagnostics {
+	white-space: pre-wrap;
+	word-break: break-all;
+	font-size: 0.8em;
+	max-height: 24em;
+	overflow: auto;
 }

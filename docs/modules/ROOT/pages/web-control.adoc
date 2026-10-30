@@ -1,10 +1,11 @@
 = Web remote
 
-BiscuitTin can serve a touch-friendly remote for your phone: a d-pad, OK and Back, and a button per tile.
+BiscuitTin can serve a touch-friendly remote for your phone: a d-pad, OK and Back, volume buttons, and a button per tile.
+While an app is in front, only the volume buttons act; other presses are dropped so they don't fire when the launcher returns.
 
-IMPORTANT: The web remote has no login.
-Anyone who can reach its port can press buttons and run pinned tiles.
-So it is *off by default*, and only starts when you switch it on.
+IMPORTANT: The web remote is plain HTTP on your LAN, protected by a pairing code.
+Anyone who has the code and can reach the port can press buttons and run pinned tiles.
+It is *off by default*, and only starts when you switch it on.
 Only enable it on a trusted network.
 
 == Turning it on
@@ -15,8 +16,26 @@ Only enable it on a trusted network.
   That row stays *Needs web control* until the remote is on. *Idle screen* draws the code bottom-right, above the RSS headlines, when the tiles fade out.
 . *Address* shows this machine's LAN IP and the web remote port.
 
-*More > Diagnostics* shows the address.
+*More > Diagnostics > App diagnostics* shows the address.
 Switching web control off stops the server.
+
+[[pairing]]
+== Pairing
+
+Every call needs the pairing code, shown as *More > Settings > Pairing code* (for example `K7QM-2XRD`).
+It is made the first time web control is switched on, and kept.
+
+* Scanning the QR code pairs straight away: the code is in the link, after `#`, which the browser keeps to itself rather than sending. The page remembers it.
+* Opening the address by hand shows a box for the code. Case and the dash don't matter.
+
+*New pairing code* unpairs every phone; each one then needs the QR code or the new code.
+Wrong codes are answered slowly, one at a time, so the code can't practically be guessed.
+API clients send the code in an `X-Biscuittin-Code` header.
+
+== Diagnostics on the phone
+
+*Diagnostics* at the bottom of the page shows the same facts as `biscuittin debug` (see xref:troubleshooting.adoc[]), with *Copy* to paste them into a bug report.
+Over plain HTTP some browsers block the clipboard; *Copy* then falls back to selecting the text.
 
 == Port
 
@@ -30,4 +49,4 @@ webControl:
 
 == API
 
-The page talks to BiscuitTin over https://connectrpc.com[ConnectRPC] (`protocol/biscuittin/v1/remote.proto`, `RemoteService`), so other clients can use the same API: `GetState`, `PressButton` and `ActivateTile`.
+The page talks to BiscuitTin over https://connectrpc.com[ConnectRPC] (`protocol/biscuittin/v1/remote.proto`, `RemoteService`), so other clients can use the same API: `GetState`, `PressButton`, `ActivateTile` and `GetRemoteDiagnostics`. Every call needs the pairing code; see <<pairing>>.

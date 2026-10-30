@@ -209,7 +209,7 @@ func rssNeedsGap(source string, titleLines []string) bool {
 
 func (u *ui) paintRSSText(source string, titleLines, sumLines []string, x, y, sourceSize, titleSize, sumSize, gap, s float32) {
 	if source != "" {
-		u.text(source, x, y, sourceSize, rl.ColorAlpha(u.accent, 0.95))
+		u.text(source, x, y, sourceSize, rl.ColorAlpha(u.accentText(), 0.95))
 		y += sourceSize + gap
 	}
 	y = u.paintRSSLines(titleLines, x, y, titleSize, 8*s, rl.RayWhite)

@@ -6,27 +6,35 @@ This is the fourth tile on the screenshot home screen.
 
 == Config
 
+The official client is https://github.com/jellyfin/jellyfin-desktop[Jellyfin Desktop], distributed on Flathub as https://flathub.org/apps/org.jellyfin.JellyfinDesktop[`org.jellyfin.JellyfinDesktop`]:
+
+[source,shell]
+----
+flatpak install flathub org.jellyfin.JellyfinDesktop
+----
+
 [source,yaml]
 ----
 entries:
   - title: Jellyfin
     subtitle: Media server
-    command: [jellyfinmediaplayer]
+    command: [flatpak, run, org.jellyfin.JellyfinDesktop, --tv]
 ----
 
-`jellyfinmediaplayer` is the binary name used by the official https://github.com/jellyfin/jellyfin-media-player[Jellyfin Media Player] packages.
-Some distributions install it as `jellyfin-media-player` instead; use whichever `which` finds on the TV box.
+`--tv` starts the 10-foot TV interface, which suits a gamepad or remote.
+Use `--fullscreen` instead for the desktop interface, full screen, or neither to open in a window.
 
-The player remembers the server URL and login in its own config.
+The player remembers the server URL and login in its own config, so the first launch asks for them once.
 
-== If Jellyfin Media Player is a Flatpak
+== Jellyfin Media Player
+
+Jellyfin Desktop replaces the older https://github.com/jellyfin/jellyfin-media-player[Jellyfin Media Player].
+If you still use that, its binary is `jellyfinmediaplayer` (`jellyfin-media-player` on some distributions) and its Flathub id is `com.github.iwalton3.jellyfin-media-player`:
 
 [source,yaml]
 ----
-    command: [flatpak, run, com.github.iwalton3.jellyfin-media-player]
+    command: [jellyfinmediaplayer]
 ----
-
-The Flathub id is https://flathub.org/apps/com.github.iwalton3.jellyfin-media-player[`com.github.iwalton3.jellyfin-media-player`].
 
 == Open the web UI instead
 
@@ -46,5 +54,6 @@ Use your real server URL.
 == Notes
 
 * The icon is looked up as `Jellyfin`.
-* The desktop player stays running until you quit it, so leave `restoreOnExit` at the default for `jellyfinmediaplayer`.
+* The desktop player stays running until you quit it, so leave `restoreOnExit` at the default.
+* *Switch to it* finds a Flatpak's window by class: add `windowClass` with the value `xprop WM_CLASS` shows for the player window. See xref:config.adoc[].
 * Output is appended to `~/.cache/biscuittin/jellyfin.log`.

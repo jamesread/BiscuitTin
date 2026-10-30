@@ -15,7 +15,8 @@ Each launched app's own output goes to `~/.cache/biscuittin/<title>.log` (see `l
 
 == Diagnostics
 
-*More > Diagnostics* shows the version, display size and refresh rate, connected gamepads, the primary input, uptime, the config, settings and cache paths, the integration addresses, the web remote's address, the local debug socket, and RSS feed status.
+*More > Diagnostics > App diagnostics* shows the version, display size and refresh rate, connected gamepads, the primary input, uptime, the config, settings and cache paths, the integration addresses, the web remote's address, the local debug socket, RSS feed status and HDMI-CEC status.
+The xref:web-control.adoc[web remote] shows the same facts under *Diagnostics*, with *Copy*.
 
 == Inspecting a running instance
 
@@ -27,7 +28,7 @@ It is a unix socket, mode `0600`, not a network listener, and it cannot press bu
 biscuittin debug
 ----
 
-That prints JSON: window size, monitors, the current screen, paths, and the same facts as *More > Diagnostics*.
+That prints JSON: window size, monitors, the current screen, paths, and the same facts as *More > Diagnostics > App diagnostics*.
 `-debug` is a different thing: it only raises the log level.
 
 The same RPC is available over Connect (`protocol/biscuittin/v1/debug.proto`, `DebugService.GetDiagnostics`):
@@ -41,7 +42,43 @@ curl --unix-socket "$XDG_RUNTIME_DIR/biscuittin/debug.sock" \
 
 If no instance is running, `biscuittin debug` exits non-zero.
 
+== One instance at a time
+
+BiscuitTin runs once per user.
+On start it writes its pid to `$XDG_RUNTIME_DIR/biscuittin/biscuittin.pid` (or `$TMPDIR/biscuittin-$UID/biscuittin.pid`), and deletes it on exit.
+Starting it again while it runs logs `already running, bringing it to the foreground`, sends the running copy `SIGUSR1`, and exits; the running copy shows its window, as Guide or the tray icon would.
+`kill -USR1 <pid>` does the same by hand.
+
+A pid file left by a crash is replaced on the next start, as is one whose pid now belongs to another program.
+`-script` runs skip the check, so screenshots can be taken beside a live launcher.
+
+== Checking the config
+
+`biscuittin check` reads the config strictly and lists what's wrong, one line each, without starting the launcher:
+
+----
+config.yaml: line 11: field colums not found in type config.Config
+config.yaml: entries[0] (RetroArch): command not found: jellyfinmediaplayer
+config.yaml: entries[2] (Jellyfin): Flatpak org.jellyfin.JellyfinDesktop is not installed
+----
+
+It exits 1 when there are problems. See xref:config.adoc#reloading[Reloading].
+
 == Common problems
+
+A tile is dimmed and says Not installed::
+Its program isn't on the host's `PATH` (or its Flatpak isn't installed). Install it, or fix `command`; the tile updates on the next reload.
+
+*Switch to it* says it couldn't find the window::
+The app's window isn't owned by the process BiscuitTin started: Flatpak apps run in their own process namespace, and launchers like Steam hand off to another process.
+Set `windowClass` on the entry to the window's `WM_CLASS` (`xprop WM_CLASS`, then click the window).
+
+Stop doesn't close an app::
+Stop sends SIGTERM, then SIGKILL after 5 seconds, and the logs say `app ignored SIGTERM, killing`.
+In the BiscuitTin Flatpak, SIGKILL can't be forwarded to the host, so stop the app from its own menu.
+
+The volume bar doesn't appear, or a toast says "Volume: …"::
+The volume commands failed, usually because `wpctl` (PipeWire) isn't installed. Set `volume.*Command` for your sound system; see xref:controls.adoc#volume[Volume].
 
 A tile shows a letter instead of an icon::
 thesvg has no exact match for the title, or the icon is still downloading.
@@ -61,6 +98,18 @@ Another program is using the port. Set `webControl.port` or `$PORT`. See xref:we
 
 Home Assistant says "no access token"::
 Put a long-lived access token in `~/.config/biscuittin/homeassistant.token`. See xref:integrations.adoc[].
+
+The web remote asks for a pairing code::
+Scan the QR code again, or enter *More > Settings > Pairing code*. After *New pairing code*, every phone has to pair again.
+
+My config edit didn't apply::
+If the file doesn't parse, the running config stays and a message says why. `fullscreen`, `font` and `webControl.port` only change on restart. See xref:config.adoc#reloading[Reloading].
+
+The screen doesn't switch off, or stays off::
+*Screen off after* always blacks out the window, then runs `screenOff.offCommand` (`xset dpms force off`), which needs X11. On Wayland set your compositor's command, or `[]`. If a gamepad press doesn't wake the monitor, check `screenOff.onCommand`.
+
+HDMI-CEC buttons do nothing::
+*App diagnostics* shows *HDMI-CEC*. *Not running* means `cec-client` isn't installed on the host, or failed; see the log. If it is running but *Input devices diagnostics* shows no CEC presses, check the TV's CEC setting (Anynet+, Bravia Sync, SimpLink and so on).
 
 No background images::
 Both providers need the internet. The last 5 shown images are reused at startup, and each provider's download cache is reused when offline, so there are none on a fresh install without a network.

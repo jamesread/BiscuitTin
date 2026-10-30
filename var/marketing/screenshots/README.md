@@ -39,7 +39,7 @@ Xbox glyphs whatever is plugged in.
 Edit [`screenshots.ini`](screenshots.ini): one section per PNG, in order, in
 one app session. `steps` are presses after the previous capture. `rss` loads a
 canned article JSON (no network) before that section's shot, and `gamepads`
-lists fake controllers for Gamepad info (Xvfb has none). Every section
+lists fake controllers for Input devices diagnostics (Xvfb has none). Every section
 needs `title` and `description`; the README captions are the descriptions.
 Then run `make` and look at every PNG.
 

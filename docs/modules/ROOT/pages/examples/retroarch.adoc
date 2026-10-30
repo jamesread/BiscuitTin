@@ -16,6 +16,9 @@ entries:
 That starts the RetroArch menu.
 Cores, playlists and shaders stay in RetroArch's own config (`~/.config/retroarch/`).
 
+On Fedora, `sudo dnf install retroarch` installs it with a set of cores as `libretro-*` packages (NES, SNES, Game Boy, PlayStation and more), in `/usr/lib64/libretro`.
+Add others with `dnf install libretro-<name>`, rather than RetroArch's core downloader, so dnf keeps them updated.
+
 To jump straight into a core and a game, add those arguments:
 
 [source,yaml]

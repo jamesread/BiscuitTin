@@ -34,7 +34,7 @@ HTML in titles and descriptions is stripped, and HTML entities and Windows-1252 
 
 Fetched XML is cached under `~/.cache/biscuittin/rss/` and reused when a refresh fails, so headlines keep working offline.
 
-*More > Diagnostics* shows how many feeds and articles are loaded.
+*More > Diagnostics > App diagnostics* shows how many feeds and articles are loaded.
 
 Leave `feeds` empty (or omit `rss`) to keep the idle screen as the photo only.
 The Settings row then reads *Needs YAML config*.

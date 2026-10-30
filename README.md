@@ -49,7 +49,7 @@ Idle mode can show a rotating headline from your RSS or Atom feeds over the phot
 
 ![More menu](var/marketing/screenshots/more.png)
 
-Integrations, settings, gamepad info and diagnostics are one button away, and every menu works from the sofa with just a d-pad and two buttons.
+Integrations, settings and diagnostics are one button away, and every menu works from the sofa with just a d-pad and two buttons.
 
 ### Integrations
 
@@ -63,9 +63,9 @@ OliveTin actions and Home Assistant automations sit under More, ready to pin as 
 
 Settings are grouped under titles. Change the photos, RSS headlines, control help and the phone web remote on screen; choices are saved without touching your config file.
 
-### Gamepad info
+### Input devices diagnostics
 
-![Gamepad info](var/marketing/screenshots/gamepads.png)
+![Input devices diagnostics](var/marketing/screenshots/gamepads.png)
 
 See which controllers BiscuitTin has found, Xbox and PlayStation alike, with live stick, trigger and button readings to check a pad works before you sit down to play.
 

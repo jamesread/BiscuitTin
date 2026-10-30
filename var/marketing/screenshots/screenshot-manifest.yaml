@@ -28,7 +28,7 @@ screenshots:
     theme: "dark"
   - name: "more"
     title: "More menu"
-    description: "Integrations, settings, gamepad info and diagnostics are one button away, and every menu works from the sofa with just a d-pad and two buttons."
+    description: "Integrations, settings and diagnostics are one button away, and every menu works from the sofa with just a d-pad and two buttons."
     url: "https://raw.githubusercontent.com/jamesread/biscuittin/main/var/marketing/screenshots/more.png"
     file: "more.png"
     width: 1920
@@ -51,7 +51,7 @@ screenshots:
     height: 1080
     theme: "dark"
   - name: "gamepads"
-    title: "Gamepad info"
+    title: "Input devices diagnostics"
     description: "See which controllers BiscuitTin has found, Xbox and PlayStation alike, with live stick, trigger and button readings to check a pad works before you sit down to play."
     url: "https://raw.githubusercontent.com/jamesread/biscuittin/main/var/marketing/screenshots/gamepads.png"
     file: "gamepads.png"

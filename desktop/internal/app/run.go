@@ -3,23 +3,31 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
+	"os"
+	"os/signal"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/jamesread/biscuittin/internal/backgrounds"
+	"github.com/jamesread/biscuittin/internal/cec"
 	"github.com/jamesread/biscuittin/internal/config"
 	"github.com/jamesread/biscuittin/internal/debugctl"
 	"github.com/jamesread/biscuittin/internal/icons"
+	"github.com/jamesread/biscuittin/internal/instance"
 	"github.com/jamesread/biscuittin/internal/integrations"
 	"github.com/jamesread/biscuittin/internal/launch"
+	"github.com/jamesread/biscuittin/internal/padbattery"
 	"github.com/jamesread/biscuittin/internal/rss"
 	"github.com/jamesread/biscuittin/internal/settings"
 	"github.com/jamesread/biscuittin/internal/tray"
 	"github.com/jamesread/biscuittin/internal/webcontrol"
+	"github.com/jamesread/biscuittin/internal/x11win"
 	"go.uber.org/zap"
 )
 
@@ -60,37 +68,53 @@ func Run(cfg *config.Config, opts Options) error {
 }
 
 type session struct {
-	cfg           *config.Config
-	settings      *settings.Settings
-	u             *ui
-	in            *input
-	sc            *script
-	bg            *backgrounds.Fetcher
-	iconResults   chan icons.Result
-	actionLists   chan actionListResult
-	actionEvents  chan integrations.Event
-	iconRequested map[string]bool
-	bridge        *webcontrol.Bridge
-	web           *webcontrol.Server
-	debugBridge   *debugctl.Bridge
-	debugSrv      *debugctl.Server
-	tray          *tray.Host
-	exits         chan launch.Exit
-	started       map[int]time.Time
-	scriptPath    string
-	webURL        string
-	bgNext        float64
-	bgShownAt     float64
-	lastInput     float64
-	idleFade      float64
-	hideAt        float64
-	waitingFor    int
-	iconsPending  atomic.Int32
-	bgPending     bool
-	hidden        bool
-	forcedIdle    bool
-	hideOnLaunch  bool
-	fullscreen    bool
+	cfg              *config.Config
+	settings         *settings.Settings
+	u                *ui
+	in               *input
+	sc               *script
+	bg               *backgrounds.Fetcher
+	iconResults      chan icons.Result
+	actionLists      chan actionListResult
+	actionEvents     chan integrations.Event
+	volumeResults    chan volumeResult
+	installedResults chan installedResult
+	installedGen     int
+	iconRequested    map[string]bool
+	bridge           *webcontrol.Bridge
+	web              *webcontrol.Server
+	debugBridge      *debugctl.Bridge
+	debugSrv         *debugctl.Server
+	tray             *tray.Host
+	raise            chan os.Signal
+	stopSignals      chan os.Signal
+	cec              *cec.Reader
+	exits            chan launch.Exit
+	started          map[int]time.Time
+	stopping         map[int]stopTimer
+	awake            keepAwake
+	batteries        batteryWatch
+	batteryResults   chan []padbattery.Battery
+	keptToast        string
+	screenSaver      *x11win.ScreenSaver
+	scriptPath       string
+	configPath       string
+	webURL           string
+	configStamp      configStamp
+	configCheckAt    float64
+	bgNext           float64
+	bgShownAt        float64
+	lastInput        float64
+	idleFade         float64
+	hideAt           float64
+	waitingFor       int
+	iconsPending     atomic.Int32
+	bgPending        bool
+	hidden           bool
+	forcedIdle       bool
+	screenOff        bool
+	hideOnLaunch     bool
+	fullscreen       bool
 }
 
 func startSession(cfg *config.Config, opts Options) (*session, error) {
@@ -105,8 +129,13 @@ func startSession(cfg *config.Config, opts Options) (*session, error) {
 	s.loadRecentBackground()
 	s.goIcon(func() { icons.Resolve(cfg, entryKey, s.iconResults) })
 	s.requestActionIcons()
+	s.checkInstalled(cfg)
 	s.startDebug()
 	s.startTray()
+	s.startRaise()
+	s.startStopSignals()
+	s.startKeepAwake()
+	s.startCEC()
 	s.lastInput = rl.GetTime()
 	lg().Info("started", zap.Int("entries", len(cfg.Entries)), zap.String("config", opts.ConfigPath))
 	return s, nil
@@ -146,30 +175,34 @@ func sessionUI(cfg *config.Config, st *settings.Settings, opts Options) *ui {
 
 func newSession(cfg *config.Config, opts Options, st *settings.Settings, u *ui, sc *script, fullscreen bool) *session {
 	s := &session{
-		cfg:           cfg,
-		scriptPath:    opts.ScriptPath,
-		settings:      st,
-		u:             u,
-		in:            &input{},
-		sc:            sc,
-		bg:            backgrounds.NewFetcher(cfg),
-		iconResults:   make(chan icons.Result, 32),
-		actionLists:   make(chan actionListResult, 4),
-		actionEvents:  make(chan integrations.Event, 16),
-		iconRequested: map[string]bool{},
-		bridge:        webcontrol.NewBridge(),
-		debugBridge:   debugctl.NewBridge(),
-		exits:         make(chan launch.Exit, 16),
-		started:       map[int]time.Time{},
-		waitingFor:    -1,
-		hideOnLaunch:  config.BoolOr(cfg.HideOnLaunch, true),
-		fullscreen:    fullscreen,
-		idleFade:      20,
+		cfg:              cfg,
+		scriptPath:       opts.ScriptPath,
+		configPath:       opts.ConfigPath,
+		settings:         st,
+		u:                u,
+		in:               &input{},
+		sc:               sc,
+		bg:               backgrounds.NewFetcher(cfg),
+		iconResults:      make(chan icons.Result, 32),
+		actionLists:      make(chan actionListResult, 4),
+		actionEvents:     make(chan integrations.Event, 16),
+		volumeResults:    make(chan volumeResult, 4),
+		installedResults: make(chan installedResult, 2),
+		batteryResults:   make(chan []padbattery.Battery, 1),
+		iconRequested:    map[string]bool{},
+		bridge:           webcontrol.NewBridge(),
+		debugBridge:      debugctl.NewBridge(),
+		exits:            make(chan launch.Exit, 16),
+		started:          map[int]time.Time{},
+		stopping:         map[int]stopTimer{},
+		waitingFor:       -1,
+		hideOnLaunch:     config.BoolOr(cfg.HideOnLaunch, true),
+		fullscreen:       fullscreen,
+		idleFade:         20,
 	}
 	u.input = s.in
-	if cfg.IdleFadeSeconds != nil {
-		s.idleFade = *cfg.IdleFadeSeconds
-	}
+	s.applySessionOptions(cfg)
+	s.configStamp, _ = statConfig(opts.ConfigPath)
 	return s
 }
 
@@ -181,7 +214,7 @@ func (s *session) loadRecentBackground() {
 	if !ok {
 		return
 	}
-	s.u.setBackground(img.Pix, img.Grid, img.Credit)
+	s.u.setBackground(img)
 	s.bgShownAt = rl.GetTime()
 }
 
@@ -197,6 +230,30 @@ func (s *session) startDebug() {
 
 func (s *session) startTray() {
 	s.tray = tray.Start()
+}
+
+// startRaise listens for a second BiscuitTin start asking this one to come
+// to the foreground.
+func (s *session) startRaise() {
+	s.raise = make(chan os.Signal, 1)
+	signal.Notify(s.raise, instance.RaiseSignal)
+}
+
+// startStopSignals turns Ctrl-C and SIGTERM (logout, systemd, kill) into a
+// normal quit, so close() and the pid file cleanup still run.
+func (s *session) startStopSignals() {
+	s.stopSignals = make(chan os.Signal, 1)
+	signal.Notify(s.stopSignals, os.Interrupt, syscall.SIGTERM)
+}
+
+// startKeepAwake connects gamepad activity to the X idle timer. Scripted
+// runs (screenshots, on a private display) leave it off.
+func (s *session) startKeepAwake() {
+	if s.sc != nil {
+		return
+	}
+	s.screenSaver = &x11win.ScreenSaver{}
+	s.awake.r = s.screenSaver
 }
 
 func openWindow(cfg *config.Config, size image.Point, fullscreen bool) {
@@ -227,6 +284,15 @@ func (s *session) close() {
 		s.debugSrv.Stop()
 	}
 	s.tray.Stop()
+	if s.screenSaver != nil {
+		s.screenSaver.Close()
+	}
+	for _, ch := range []chan os.Signal{s.raise, s.stopSignals} {
+		if ch != nil {
+			signal.Stop(ch)
+		}
+	}
+	s.stopCEC()
 	s.u.unload()
 	rl.CloseAudioDevice()
 	rl.CloseWindow()
@@ -260,6 +326,11 @@ func (s *session) show() {
 	// Reset key repeat and Guide-hold state, keeping the primary device.
 	*s.in = input{primary: s.in.primary, pad: s.in.pad, usedInput: s.in.usedInput, padOverride: s.in.padOverride}
 	s.lastInput = rl.GetTime()
+	s.u.refreshRecent()
+	if s.keptToast != "" {
+		s.u.setToast(s.keptToast, colorBad, 8)
+		s.keptToast = ""
+	}
 	lg().Info("launcher shown")
 }
 
@@ -288,8 +359,15 @@ func (s *session) tick() (bool, error) {
 	s.applySettingsChange()
 	s.requestBackground()
 	s.handleExits()
+	s.checkStopping(time.Now())
+	s.checkSleep(time.Now())
+	s.pollBatteries(time.Now())
 	s.syncServers()
 	s.drainTray()
+	s.drainRaise()
+	s.drainStopSignals()
+	s.drainVolume()
+	s.watchConfig()
 	if s.u.quit {
 		return true, nil
 	}
@@ -305,6 +383,27 @@ func (s *session) drainTray() {
 		return
 	}
 	s.applyTray(ev)
+}
+
+func (s *session) drainStopSignals() {
+	sig, ok := tryRecv(s.stopSignals)
+	if !ok {
+		return
+	}
+	lg().Info("stopping on signal", zap.String("signal", sig.String()))
+	s.u.quit = true
+}
+
+func (s *session) drainRaise() {
+	if _, ok := tryRecv(s.raise); !ok {
+		return
+	}
+	lg().Info("raised by another start")
+	s.hideAt = 0
+	if s.screenOff {
+		s.wakeScreen()
+	}
+	s.show()
 }
 
 func (s *session) applyTray(ev tray.Event) {
@@ -330,6 +429,8 @@ func (s *session) advanceFrame() (bool, error) {
 func (s *session) drainAsync() {
 	s.drainResults()
 	s.drainBackground()
+	s.drainInstalled()
+	s.drainBatteries()
 }
 
 func (s *session) drainResults() {
@@ -392,7 +493,7 @@ func (s *session) applyBackgroundImage(img backgrounds.Image) {
 	if !s.settings.BackgroundsEnabled {
 		return
 	}
-	s.u.setBackground(img.Pix, img.Grid, img.Credit)
+	s.u.setBackground(img)
 	s.bgShownAt = rl.GetTime()
 	s.bgNext = s.bgShownAt + float64(s.settings.BackgroundInterval)
 }
@@ -451,10 +552,16 @@ func (s *session) handleExits() {
 }
 
 func (s *session) noteExit(ev launch.Exit) {
-	e := s.cfg.Entries[ev.Index]
-	s.u.pids[ev.Index] = removePID(s.u.pids[ev.Index], ev.PID)
 	ranFor := time.Since(s.started[ev.PID])
 	delete(s.started, ev.PID)
+	// A config reload may have moved or removed the entry since launch.
+	ev.Index = s.u.entryForPID(ev.PID)
+	if ev.Index < 0 {
+		lg().Info("app exited", zap.Int("pid", ev.PID), zap.Duration("ranFor", ranFor.Round(time.Millisecond)), zap.Error(ev.Err))
+		return
+	}
+	e := s.cfg.Entries[ev.Index]
+	s.u.pids[ev.Index] = removePID(s.u.pids[ev.Index], ev.PID)
 	lg().Info("app exited", zap.String("title", e.Title), zap.Int("pid", ev.PID), zap.Duration("ranFor", ranFor.Round(time.Millisecond)), zap.Error(ev.Err))
 	if exitFailedQuickly(ev, ranFor) {
 		s.u.setToast(describeExit(e, ev.Err), colorBad, 6)
@@ -492,17 +599,26 @@ func (s *session) showIfLastWaiting(ev launch.Exit) {
 }
 
 func (s *session) syncServers() {
+	s.u.ensureWebCode()
+	s.bridge.SetCode(s.settings.WebCode)
 	s.web, s.webURL = syncWebControl(s.web, s.settings.WebControl, s.cfg, s.bridge, s.u)
 	s.u.webURL = s.webURL
 	s.bridge.Publish(s.u.remoteState(s.hidden))
-	if s.debugSrv != nil {
-		s.debugBridge.Publish(s.u.debugSnapshot(s.hidden))
+	if s.debugSrv == nil && s.web == nil {
+		return
 	}
+	snap := s.u.debugSnapshot(s.hidden)
+	s.debugBridge.Publish(snap)
+	s.bridge.PublishDiagnostics(snap)
 }
 
 func (s *session) pollWhileHidden() {
-	drainRemote(s.bridge) // stale taps must not fire when the launcher returns
+	drainRemote(s.bridge, s.changeVolume)
+	s.drainCEC()
 	rl.PollInputEvents()
+	if used, _ := gamepadActive(); used {
+		s.awake.padUsed(time.Now())
+	}
 	if s.in.guideHeldFor(s.cfg.RestoreHoldSeconds) {
 		s.show()
 	}
@@ -527,15 +643,27 @@ func (s *session) hideIfDue() bool {
 
 func (s *session) handleVisibleFrame() (done bool, err error) {
 	a, remoteTap := s.nextAction()
+	if s.in.padActive {
+		s.awake.padUsed(time.Now())
+	}
 	a, done, err = s.maybeScript(a)
 	if done {
 		return true, err
 	}
-	a = s.applyIdle(a, remoteTap)
-	syncCursor(s.u.idle)
 	if a == actionQuit {
 		return true, nil
 	}
+	if isVolume(a) {
+		s.changeVolume(a)
+		a = actionNone
+	}
+	a = s.applyScreenOff(a)
+	if s.screenOff {
+		drawScreenOff()
+		return false, nil
+	}
+	a = s.applyIdle(a, remoteTap)
+	syncCursor(s.u.idle)
 	return s.drawAfterAction(a), nil
 }
 
@@ -579,6 +707,9 @@ func (s *session) drawAfterAction(a action) bool {
 func (s *session) nextAction() (action, bool) {
 	a := s.in.poll()
 	if a != actionNone {
+		return a, false
+	}
+	if a := s.cecAction(); a != actionNone {
 		return a, false
 	}
 	return s.u.nextRemoteAction(s.bridge)
@@ -739,6 +870,7 @@ func (s *session) runActionTile(t tile) {
 		return
 	}
 	s.u.actionsRunning[t.key]++
+	s.u.noteUsed(t, time.Now())
 	s.u.setToast("Starting "+t.title+"...", colorOK, 3)
 	go src.Run(t.action, s.actionEvents)
 }
@@ -752,7 +884,34 @@ func (s *session) launchEntry(t tile) {
 }
 
 func (s *session) openRunningMenu(entry int) {
-	s.u.openRunning(s.cfg.Entries[entry].Title, func() { s.killEntry(entry) }, func() { s.startEntry(entry) })
+	s.u.openRunning(s.cfg.Entries[entry].Title,
+		func() { s.switchEntry(entry) },
+		func() { s.killEntry(entry) },
+		func() { s.startEntry(entry) })
+}
+
+// switchEntry brings a running entry's window to the front and hides the
+// launcher, as a launch would.
+func (s *session) switchEntry(entry int) {
+	s.u.screen = screenHome
+	e := s.cfg.Entries[entry]
+	if err := x11win.Switch(livePIDs(s.u.pids[entry]), e.WindowClass); err != nil {
+		lg().Warn("switch failed", zap.String("title", e.Title), zap.Error(err))
+		msg := "Couldn't find " + e.Title + "'s window"
+		if !errors.Is(err, x11win.ErrNotFound) {
+			msg = "Couldn't switch to " + e.Title + ": " + err.Error()
+		}
+		s.u.setToast(msg, colorBad, 6)
+		return
+	}
+	lg().Info("switched", zap.String("title", e.Title))
+	if !s.hideOnLaunch {
+		return
+	}
+	s.hideAt = rl.GetTime()
+	if config.BoolOr(e.RestoreOnExit, true) {
+		s.waitingFor = entry
+	}
 }
 
 func (s *session) startEntry(entry int) {
@@ -770,17 +929,52 @@ func (s *session) startEntry(entry int) {
 func (s *session) killEntry(entry int) {
 	s.u.screen = screenHome
 	title := s.cfg.Entries[entry].Title
-	if err := killPIDs(livePIDs(s.u.pids[entry])); err != nil {
+	pids := livePIDs(s.u.pids[entry])
+	if err := killPIDs(pids); err != nil {
 		s.u.setToast("Could not stop "+title+": "+err.Error(), colorBad, 6)
 		return
 	}
+	deadline := time.Now().Add(forceStopAfter)
+	for _, pid := range pids {
+		s.stopping[pid] = stopTimer{title: title, deadline: deadline}
+	}
 	s.u.setToast("Stopping "+title+"...", colorOK, 3)
+}
+
+// forceStopAfter is how long Stop waits after SIGTERM before SIGKILL.
+const forceStopAfter = 5 * time.Second
+
+// stopTimer is a process sent SIGTERM by Stop, to be killed outright if it
+// is still running at deadline.
+type stopTimer struct {
+	deadline time.Time
+	title    string
+}
+
+func (s *session) checkStopping(now time.Time) {
+	for pid, st := range s.stopping {
+		if !launch.Alive(pid) {
+			delete(s.stopping, pid)
+			continue
+		}
+		if now.Before(st.deadline) {
+			continue
+		}
+		delete(s.stopping, pid)
+		lg().Warn("app ignored SIGTERM, killing", zap.String("title", st.title), zap.Int("pid", pid))
+		if err := launch.ForceKill(pid); err != nil {
+			s.u.setToast("Could not force stop "+st.title+": "+err.Error(), colorBad, 6)
+			continue
+		}
+		s.u.setToast("Force stopped "+st.title, colorBad, 4)
+	}
 }
 
 func (s *session) noteLaunch(e config.Entry, entry, pid int) {
 	lg().Info("launched", zap.String("title", e.Title), zap.Int("pid", pid))
 	s.started[pid] = time.Now()
 	s.u.pids[entry] = append(s.u.pids[entry], pid)
+	s.u.noteUsed(tile{kind: tileEntry, title: e.Title}, time.Now())
 	s.u.setToast("Launching "+e.Title+"...", colorOK, 3)
 	if !s.hideOnLaunch {
 		return

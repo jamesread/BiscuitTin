@@ -165,9 +165,9 @@ func (u *ui) drawActionRows(l *uiActionList, w, h, s, margin float32) {
 	}
 }
 
-func actionRowFill(accent rl.Color, selected bool) rl.Color {
+func actionRowFill(focus rl.Color, selected bool) rl.Color {
 	if selected {
-		return rl.ColorAlpha(accent, 0.22)
+		return rl.ColorAlpha(focus, 0.22)
 	}
 	return rl.ColorAlpha(rl.Black, 0.3)
 }
@@ -187,10 +187,10 @@ func (u *ui) actionRowLabels(a integrations.ListedAction) (box string, textColor
 
 func (u *ui) drawActionRow(a integrations.ListedAction, selected bool, x, y, listW, rowH, s float32) {
 	r := rl.Rectangle{X: x, Y: y, Width: listW, Height: rowH - 8*s}
-	fill := actionRowFill(u.accent, selected)
+	fill := actionRowFill(u.focusFill(), selected)
 	rl.DrawRectangleRounded(r, 0.3, 8, u.fa(fill))
 	if selected {
-		rl.DrawRectangleRoundedLinesEx(r, 0.3, 8, 3*s, u.fa(u.accent))
+		rl.DrawRectangleRoundedLinesEx(r, 0.3, 8, 3*s, u.fa(u.focusBorder()))
 	}
 	box, textColor, group := u.actionRowLabels(a)
 	u.surface = &surfaceTint{contrast.RGBOf(fill), float64(fill.A) / 255}
@@ -201,7 +201,7 @@ func (u *ui) drawActionRow(a integrations.ListedAction, selected bool, x, y, lis
 func (u *ui) paintActionRow(r rl.Rectangle, y, listW, rowH, s float32, box, title, group string, textColor rl.Color) {
 	size := 30 * s
 	ty := y + (rowH-8*s-size)/2
-	u.text(box, r.X+20*s, ty, size, u.accent)
+	u.text(box, r.X+20*s, ty, size, u.accentText())
 	groupW := listW * 0.38
 	u.text(u.fitText(title, size, listW-groupW-170*s), r.X+130*s, ty, size, textColor)
 	group = u.fitText(group, 26*s, groupW-30*s)

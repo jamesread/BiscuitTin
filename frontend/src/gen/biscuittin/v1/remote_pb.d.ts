@@ -4,6 +4,7 @@
 
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import type { Message } from "@bufbuild/protobuf";
+import type { GetDiagnosticsResponse } from "./debug_pb";
 
 /**
  * Describes the file biscuittin/v1/remote.proto.
@@ -165,6 +166,34 @@ export declare type ActivateTileResponse = Message<"biscuittin.v1.ActivateTileRe
 export declare const ActivateTileResponseSchema: GenMessage<ActivateTileResponse>;
 
 /**
+ * @generated from message biscuittin.v1.GetRemoteDiagnosticsRequest
+ */
+export declare type GetRemoteDiagnosticsRequest = Message<"biscuittin.v1.GetRemoteDiagnosticsRequest"> & {
+};
+
+/**
+ * Describes the message biscuittin.v1.GetRemoteDiagnosticsRequest.
+ * Use `create(GetRemoteDiagnosticsRequestSchema)` to create a new message.
+ */
+export declare const GetRemoteDiagnosticsRequestSchema: GenMessage<GetRemoteDiagnosticsRequest>;
+
+/**
+ * @generated from message biscuittin.v1.GetRemoteDiagnosticsResponse
+ */
+export declare type GetRemoteDiagnosticsResponse = Message<"biscuittin.v1.GetRemoteDiagnosticsResponse"> & {
+  /**
+   * @generated from field: biscuittin.v1.GetDiagnosticsResponse diagnostics = 1;
+   */
+  diagnostics?: GetDiagnosticsResponse | undefined;
+};
+
+/**
+ * Describes the message biscuittin.v1.GetRemoteDiagnosticsResponse.
+ * Use `create(GetRemoteDiagnosticsResponseSchema)` to create a new message.
+ */
+export declare const GetRemoteDiagnosticsResponseSchema: GenMessage<GetRemoteDiagnosticsResponse>;
+
+/**
  * Button is a remote control button.
  *
  * @generated from enum biscuittin.v1.Button
@@ -208,6 +237,19 @@ export enum Button {
    * @generated from enum value: BUTTON_BACK = 6;
    */
   BACK = 6,
+
+  /**
+   * BUTTON_VOLUME_UP and BUTTON_VOLUME_DOWN run volume.upCommand and
+   * volume.downCommand, as LB and RB do.
+   *
+   * @generated from enum value: BUTTON_VOLUME_UP = 7;
+   */
+  VOLUME_UP = 7,
+
+  /**
+   * @generated from enum value: BUTTON_VOLUME_DOWN = 8;
+   */
+  VOLUME_DOWN = 8,
 }
 
 /**
@@ -217,7 +259,9 @@ export declare const ButtonSchema: GenEnum<Button>;
 
 /**
  * RemoteService lets a phone or tablet drive BiscuitTin like a gamepad, over
- * the "web control" server (More > Settings > Web control).
+ * the "web control" server (More > Settings > Web control). Every call needs
+ * the pairing code in the X-Biscuittin-Code header; without it the call
+ * fails with Unauthenticated.
  *
  * @generated from service biscuittin.v1.RemoteService
  */
@@ -254,6 +298,17 @@ export declare const RemoteService: GenService<{
     methodKind: "unary";
     input: typeof ActivateTileRequestSchema;
     output: typeof ActivateTileResponseSchema;
+  },
+  /**
+   * GetRemoteDiagnostics returns the same facts as the local debug socket, for
+   * copying into a bug report from a phone.
+   *
+   * @generated from rpc biscuittin.v1.RemoteService.GetRemoteDiagnostics
+   */
+  getRemoteDiagnostics: {
+    methodKind: "unary";
+    input: typeof GetRemoteDiagnosticsRequestSchema;
+    output: typeof GetRemoteDiagnosticsResponseSchema;
   },
 }>;
 

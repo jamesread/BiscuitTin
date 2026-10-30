@@ -35,6 +35,7 @@ const (
 // never stall rendering. Items() is the current merged list, newest first.
 type Fetcher struct {
 	client   *http.Client
+	stop     chan struct{}
 	dir      string
 	feeds    []config.RSSFeed
 	items    []Item
@@ -69,6 +70,7 @@ func NewFetcher(cfg *config.Config) *Fetcher {
 		dir:      filepath.Join(cfg.CacheDir, "rss"),
 		client:   &http.Client{Timeout: clientTimeout},
 		interval: time.Duration(cfg.RSS.Interval) * time.Second,
+		stop:     make(chan struct{}),
 	}
 	if f.interval < time.Minute {
 		f.interval = 15 * time.Minute
@@ -122,9 +124,22 @@ func (f *Fetcher) run() {
 	f.refresh()
 	t := time.NewTicker(f.interval)
 	defer t.Stop()
-	for range t.C {
-		f.refresh()
+	for {
+		select {
+		case <-t.C:
+			f.refresh()
+		case <-f.stop:
+			return
+		}
 	}
+}
+
+// Stop ends background refreshes. A nil or Static fetcher has none.
+func (f *Fetcher) Stop() {
+	if f == nil || f.stop == nil {
+		return
+	}
+	close(f.stop)
 }
 
 func (f *Fetcher) Items() []Item {

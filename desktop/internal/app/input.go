@@ -19,6 +19,8 @@ const (
 	actionBack
 	actionExit
 	actionQuit
+	actionVolumeUp
+	actionVolumeDown
 )
 
 const (
@@ -35,9 +37,11 @@ type input struct {
 	// hints don't depend on what is plugged in.
 	padOverride string
 	queued      []action
-	held        action
-	nextFire    float64
-	guideHeld   float64
+	// recent is the last few key and CEC presses, by name, newest last.
+	recent    []string
+	held      action
+	nextFire  float64
+	guideHeld float64
 	// primary is the device used most recently, which decides whether control
 	// help shows gamepad buttons or keys. pad is the gamepad last used.
 	primary   inputDevice
@@ -48,6 +52,9 @@ type input struct {
 	// Buttons that are merely still held don't count, so the press that sent
 	// the UI idle (Back) doesn't immediately wake it again.
 	active bool
+	// padActive is true for a frame with a new gamepad press or a moved
+	// stick, which X doesn't see as activity.
+	padActive bool
 }
 
 type inputDevice int
@@ -137,20 +144,24 @@ func (in *input) padName() string {
 // and release within a single frame, which IsKeyPressed misses, so key
 // presses are read from raylib's press queue instead.
 var keyActions = map[int32]action{
-	rl.KeyUp:        actionUp,
-	rl.KeyW:         actionUp,
-	rl.KeyDown:      actionDown,
-	rl.KeyS:         actionDown,
-	rl.KeyLeft:      actionLeft,
-	rl.KeyA:         actionLeft,
-	rl.KeyRight:     actionRight,
-	rl.KeyD:         actionRight,
-	rl.KeyEnter:     actionActivate,
-	rl.KeyKpEnter:   actionActivate,
-	rl.KeySpace:     actionActivate,
-	rl.KeyEscape:    actionExit,
-	rl.KeyBackspace: actionBack,
-	rl.KeyBack:      actionBack,
+	rl.KeyUp:         actionUp,
+	rl.KeyW:          actionUp,
+	rl.KeyDown:       actionDown,
+	rl.KeyS:          actionDown,
+	rl.KeyLeft:       actionLeft,
+	rl.KeyA:          actionLeft,
+	rl.KeyRight:      actionRight,
+	rl.KeyD:          actionRight,
+	rl.KeyEnter:      actionActivate,
+	rl.KeyKpEnter:    actionActivate,
+	rl.KeySpace:      actionActivate,
+	rl.KeyEscape:     actionExit,
+	rl.KeyBackspace:  actionBack,
+	rl.KeyBack:       actionBack,
+	rl.KeyMinus:      actionVolumeDown,
+	rl.KeyKpSubtract: actionVolumeDown,
+	rl.KeyEqual:      actionVolumeUp,
+	rl.KeyKpAdd:      actionVolumeUp,
 }
 
 func keyAction(k int32) action {
@@ -278,6 +289,7 @@ func (in *input) notePrimary() {
 	defer in.logPrimaryChange(before)
 	padUsed, pad := gamepadActive()
 	in.active = padUsed
+	in.padActive = padUsed
 	if padUsed {
 		in.primary, in.pad, in.usedInput = deviceGamepad, pad, true
 		return
@@ -312,6 +324,24 @@ func (in *input) collectPressed() {
 	if gamepadBackPressed() {
 		in.queued = append(in.queued, actionBack)
 	}
+	in.queued = append(in.queued, gamepadShoulders()...)
+}
+
+// gamepadShoulders turns LB and RB (L1 and R1) into volume down and up.
+func gamepadShoulders() []action {
+	var out []action
+	for g := range int32(maxGamepads) {
+		if !rl.IsGamepadAvailable(g) {
+			continue
+		}
+		if rl.IsGamepadButtonPressed(g, rl.GamepadButtonLeftTrigger1) {
+			out = append(out, actionVolumeDown)
+		}
+		if rl.IsGamepadButtonPressed(g, rl.GamepadButtonRightTrigger1) {
+			out = append(out, actionVolumeUp)
+		}
+	}
+	return out
 }
 
 func (in *input) collectKeys() {
@@ -322,6 +352,7 @@ func (in *input) collectKeys() {
 
 func (in *input) noteKey(k int32) {
 	in.active = true
+	in.noteRecent(keyName(k))
 	in.primary, in.usedInput = deviceKeyboard, true
 	if a := keyAction(k); a != actionNone {
 		in.queued = append(in.queued, a)

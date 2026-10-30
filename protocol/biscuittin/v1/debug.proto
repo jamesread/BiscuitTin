@@ -7,8 +7,8 @@ option go_package = "github.com/jamesread/biscuittin/gen/biscuittin/v1;biscuitti
 // DebugService is a local, read-only inspect API served on a unix socket.
 // It is not the web remote: it does not accept button presses or launches.
 service DebugService {
-  // GetDiagnostics returns the facts shown on More > Diagnostics, plus
-  // window and monitor sizes.
+  // GetDiagnostics returns the facts shown on More > Diagnostics > App
+  // diagnostics, plus window and monitor sizes.
   rpc GetDiagnostics(GetDiagnosticsRequest) returns (GetDiagnosticsResponse);
 }
 
@@ -64,6 +64,10 @@ message GetDiagnosticsResponse {
   string home_assistant = 20;
   // web_control is the web remote URL, or "off".
   string web_control = 21;
+  // rss is the RSS feed status, e.g. "3 feeds, 42 articles" or "Off".
+  string rss = 22;
+  // cec is the HDMI-CEC status, e.g. "Off" or "cec-client running".
+  string cec = 23;
 }
 
 // Window is the launcher window's size and visibility.

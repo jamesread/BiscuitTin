@@ -70,6 +70,8 @@ type Image struct {
 	Pix    *image.RGBA
 	Grid   *contrast.LumGrid
 	Credit string
+	// Title names the picture, e.g. "Lake Bled in winter", or is empty.
+	Title string
 }
 
 // Fetcher runs providers on a background goroutine so downloads and JPEG
@@ -109,6 +111,12 @@ func (f *Fetcher) Request(w, h int) {
 	}
 }
 
+// Stop ends the fetcher's goroutine once any download in progress is done.
+// It must not be used afterwards.
+func (f *Fetcher) Stop() {
+	close(f.requests)
+}
+
 func (f *Fetcher) run() {
 	for size := range f.requests {
 		f.Out <- f.fetch(size)
@@ -117,7 +125,7 @@ func (f *Fetcher) run() {
 
 // fetch tries each provider in turn, rotating the starting provider so
 // consecutive images alternate between sources.
-func (f *Fetcher) decodeFetched(i int, path, credit string) (Image, error, bool) {
+func (f *Fetcher) decodeFetched(i int, path, credit, title string) (Image, error, bool) {
 	pix, err := decodeRGBA(path)
 	if err != nil {
 		lg().Warn("decode failed, removing", zap.String("path", path), zap.Error(err))
@@ -125,10 +133,10 @@ func (f *Fetcher) decodeFetched(i int, path, credit string) (Image, error, bool)
 		return Image{}, err, false
 	}
 	f.next = (f.next + i + 1) % len(f.providers)
-	if err := saveRecent(f.recentDir, path, credit); err != nil {
+	if err := saveRecent(f.recentDir, path, credit, title); err != nil {
 		lg().Warn("could not cache recent background", zap.Error(err))
 	}
-	return Image{Pix: pix, Grid: contrast.BuildLumGrid(pix), Credit: credit}, nil, true
+	return Image{Pix: pix, Grid: contrast.BuildLumGrid(pix), Credit: credit, Title: title}, nil, true
 }
 
 func (f *Fetcher) tryProvider(i int, size Size) (Image, error, bool) {
@@ -141,7 +149,7 @@ func (f *Fetcher) tryProvider(i int, size Size) (Image, error, bool) {
 			return Image{}, err, false
 		}
 	}
-	return f.decodeFetched(i, path, credit)
+	return f.decodeFetched(i, path, credit, imageTitle(p, path))
 }
 
 func (f *Fetcher) fetchFromProviders(size Size) Image {
@@ -208,14 +216,53 @@ func readCredit(imagePath string) string {
 	return strings.TrimSpace(string(raw))
 }
 
+// readTitle is the picture's title from "<image>.title", or empty.
+func readTitle(imagePath string) string {
+	raw, _ := os.ReadFile(imagePath + ".title")
+	return strings.TrimSpace(string(raw))
+}
+
+// titler is a provider that can name a picture with no ".title" file.
+type titler interface {
+	title(path string) string
+}
+
+func imageTitle(p bgProvider, path string) string {
+	if t := readTitle(path); t != "" {
+		return t
+	}
+	if t, ok := p.(titler); ok {
+		return t.title(path)
+	}
+	return ""
+}
+
+// removeImage deletes a cached image and its credit and title.
+func removeImage(path string) {
+	_ = os.Remove(path)
+	_ = os.Remove(path + ".credit")
+	_ = os.Remove(path + ".title")
+}
+
+// writeSidecars saves the credit, and the title when there is one.
+func writeSidecars(path, credit, title string) error {
+	if err := fsutil.WriteFileAtomic(path+".credit", []byte(credit+"\n")); err != nil {
+		return err
+	}
+	if title == "" {
+		return nil
+	}
+	return fsutil.WriteFileAtomic(path+".title", []byte(title+"\n"))
+}
+
 // download saves url to path (with its credit alongside) unless already
 // cached, then prunes the directory to the newest bgKeepPerSource images.
-func writeDownload(client *http.Client, url, path, credit string) error {
+func writeDownload(client *http.Client, url, path, credit, title string) error {
 	raw, err := httpGet(client, url, bgMaxDownload)
 	if err != nil {
 		return err
 	}
-	if err := fsutil.WriteFileAtomic(path+".credit", []byte(credit+"\n")); err != nil {
+	if err := writeSidecars(path, credit, title); err != nil {
 		return err
 	}
 	if err := fsutil.WriteFileAtomic(path, raw); err != nil {
@@ -225,14 +272,14 @@ func writeDownload(client *http.Client, url, path, credit string) error {
 	return nil
 }
 
-func download(client *http.Client, url, path, credit string) error {
+func download(client *http.Client, url, path, credit, title string) error {
 	if _, err := os.Stat(path); err == nil {
 		return nil
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return err
 	}
-	return writeDownload(client, url, path, credit)
+	return writeDownload(client, url, path, credit, title)
 }
 
 func httpGet(client *http.Client, url string, limit int64) ([]byte, error) {
@@ -259,8 +306,7 @@ func pruneCache(dir string, keep int) {
 	}
 	sortByModTimeNewest(files)
 	for _, p := range files[keep:] {
-		_ = os.Remove(p)
-		_ = os.Remove(p + ".credit")
+		removeImage(p)
 	}
 }
 

@@ -80,14 +80,12 @@ func purgeLegacyPOTD(wikiDir, recents string) {
 		return
 	}
 	for _, path := range cachedImages(wikiDir) {
-		_ = os.Remove(path)
-		_ = os.Remove(path + ".credit")
+		removeImage(path)
 	}
 	_ = os.RemoveAll(feeds)
 	for _, path := range cachedImages(recents) {
 		if strings.Contains(readCredit(path), "Wikimedia") {
-			_ = os.Remove(path)
-			_ = os.Remove(path + ".credit")
+			removeImage(path)
 		}
 	}
 }
@@ -149,27 +147,26 @@ func wikiLastErr(err error) error {
 	return errWikimediaSkip
 }
 
-func (p *wikimediaProvider) tryWidth(id string, info commonsInfo, w int, credit string) (string, error) {
+func (p *wikimediaProvider) tryWidth(id string, info commonsInfo, w int, credit, title string) (string, error) {
 	url, ok := wikimediaURL(info.URL, info.ThumbURL, info.Width, w)
 	if !ok {
 		return "", errWikimediaSkip
 	}
 	path := filepath.Join(p.dir, fmt.Sprintf("%s-%d.jpg", id, w))
-	if err := download(p.client, url, path, credit); err != nil {
+	if err := download(p.client, url, path, credit, title); err != nil {
 		return "", err
 	}
 	if _, err := decodeRGBA(path); err != nil {
-		_ = os.Remove(path)
-		_ = os.Remove(path + ".credit")
+		removeImage(path)
 		return "", err
 	}
 	return path, nil
 }
 
-func (p *wikimediaProvider) downloadWidths(id string, info commonsInfo, size Size, credit string) (string, string, error) {
+func (p *wikimediaProvider) downloadWidths(id string, info commonsInfo, size Size, credit, title string) (string, string, error) {
 	var lastErr error
 	for _, w := range wikimediaThumbWidths(size, info.Width) {
-		path, err := p.tryWidth(id, info, w, credit)
+		path, err := p.tryWidth(id, info, w, credit, title)
 		if err == nil {
 			return path, credit, nil
 		}
@@ -183,7 +180,18 @@ func (p *wikimediaProvider) downloadPage(pg commonsPage, size Size) (string, str
 	credit := commonsCredit(info)
 	sum := sha256.Sum256([]byte(pg.Title))
 	id := hex.EncodeToString(sum[:8])
-	return p.downloadWidths(id, info, size, credit)
+	return p.downloadWidths(id, info, size, credit, commonsTitle(pg))
+}
+
+// commonsTitle is the picture's object name, or its file name without
+// "File:" and the extension.
+func commonsTitle(pg commonsPage) string {
+	if len(pg.ImageInfo) > 0 {
+		if t := strings.TrimSpace(htmlTag.ReplaceAllString(pg.ImageInfo[0].meta("ObjectName"), "")); t != "" {
+			return t
+		}
+	}
+	return fileTitle(strings.TrimPrefix(pg.Title, "File:"))
 }
 
 type commonsQuery struct {

@@ -23,24 +23,57 @@ var Intervals = []int{60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43
 // config file is never rewritten by the app.
 type Settings struct {
 	File string `yaml:"-"` // where the settings are saved
+	// FocusBorder and FocusFill colour the selected tile, menu row or
+	// action ("#rrggbb"). Empty follows the config's accent.
+	FocusBorder string `yaml:"focusBorder,omitempty"`
+	FocusFill   string `yaml:"focusFill,omitempty"`
+	// AccentText colours headings, focused values and other highlighted
+	// text ("#rrggbb"). Empty follows the config's accent.
+	AccentText string `yaml:"accentText,omitempty"`
+	// WebCode is the web remote's pairing code, made when web control is
+	// first switched on.
+	WebCode string `yaml:"webCode,omitempty"`
 	// PinnedActions are pinned from More (OliveTin, Home Assistant, ...) and
 	// shown as tiles.
 	PinnedActions []integrations.PinnedAction `yaml:"pinnedActions,omitempty"`
 	// LegacyOliveTinActions is the pre-Home Assistant name for PinnedActions,
 	// read once and migrated.
 	LegacyOliveTinActions []integrations.PinnedAction `yaml:"olivetinActions,omitempty"`
+	// TileOrder is the home screen order, by tile ID ("entry/<title>" or a
+	// pinned action's key); HiddenTiles are left off the home screen.
+	TileOrder   []string `yaml:"tileOrder,omitempty"`
+	HiddenTiles []string `yaml:"hiddenTiles,omitempty"`
+	// RecentFirst puts the most recently launched tiles first on the home
+	// screen; LastUsed is when each tile (by tile ID) was last launched, in
+	// unix seconds.
+	LastUsed    map[string]int64 `yaml:"lastUsed,omitempty"`
+	RecentFirst bool             `yaml:"recentFirst"`
 	// QRPlace is none, menu (home tiles) or idle. Default none.
 	QRPlace            QRPlace `yaml:"qrPlace"`
 	BackgroundInterval int     `yaml:"backgroundInterval"`
+	// ScreenOffAfter blanks the screen after this many idle seconds; 0 is
+	// never (the default).
+	ScreenOffAfter int `yaml:"screenOffAfter"`
+	// InterfaceSize is a percentage of the normal size: 85, 100, 115 or
+	// 130. Unset is 100.
+	InterfaceSize int `yaml:"interfaceSize,omitempty"`
 	// RSSInterval is how long each headline stays on the idle screen.
 	RSSInterval        int  `yaml:"rssInterval"`
 	BackgroundsEnabled bool `yaml:"backgroundsEnabled"`
 	// RSSEnabled shows idle headlines when feeds are configured. Default on.
 	RSSEnabled bool `yaml:"rssEnabled"`
-	// HideAttribution hides the background image credit; HideHelp hides the
-	// control hints in the footer.
+	// HideAttribution hides the background image credit, separately from
+	// the title; HideHelp hides the control hints in the footer.
 	HideAttribution bool `yaml:"hideAttribution"`
 	HideHelp        bool `yaml:"hideHelp"`
+	// SleepPowerOff makes the Sleep timer power off instead of suspend.
+	SleepPowerOff bool `yaml:"sleepPowerOff"`
+	// MuteMenuSounds silences the move, select and back clicks. Default
+	// off.
+	MuteMenuSounds bool `yaml:"muteMenuSounds"`
+	// ShowImageTitle shows the picture's title above its credit. Default
+	// off.
+	ShowImageTitle bool `yaml:"showImageTitle"`
 	// WebControl runs the web remote on 0.0.0.0.
 	WebControl bool `yaml:"webControl"`
 }
@@ -240,4 +273,23 @@ func plural(n int, unit string) string {
 		return "1 " + unit
 	}
 	return fmt.Sprintf("%d %ss", n, unit)
+}
+
+// ScreenOffSteps are the Screen off after choices, in seconds; 0 is never.
+var ScreenOffSteps = []int{0, 300, 600, 900, 1800, 3600, 7200, 14400}
+
+// StepScreenOff moves through ScreenOffSteps like StepInterval, or cycles
+// round for dir 0.
+func StepScreenOff(current, dir int) int {
+	i := slices.Index(ScreenOffSteps, current)
+	if i < 0 {
+		i = 0
+		for i+1 < len(ScreenOffSteps) && ScreenOffSteps[i+1] <= current {
+			i++
+		}
+	}
+	if dir == 0 {
+		return ScreenOffSteps[(i+1)%len(ScreenOffSteps)]
+	}
+	return ScreenOffSteps[min(max(i+dir, 0), len(ScreenOffSteps)-1)]
 }

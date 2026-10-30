@@ -29,11 +29,10 @@ func LoadRecent(cacheDir string) (Image, bool) {
 		pix, err := decodeRGBA(path)
 		if err != nil {
 			lg().Warn("recent background unreadable, removing", zap.String("path", path), zap.Error(err))
-			_ = os.Remove(path)
-			_ = os.Remove(path + ".credit")
+			removeImage(path)
 			continue
 		}
-		return Image{Pix: pix, Grid: contrast.BuildLumGrid(pix), Credit: readCredit(path)}, true
+		return Image{Pix: pix, Grid: contrast.BuildLumGrid(pix), Credit: readCredit(path), Title: readTitle(path)}, true
 	}
 	return Image{}, false
 }
@@ -57,12 +56,12 @@ func recentExt(src string) string {
 	return ".jpg"
 }
 
-func writeRecentFiles(dest, src, credit, dir string) error {
+func writeRecentFiles(dest, src, credit, title, dir string) error {
 	raw, err := os.ReadFile(src)
 	if err != nil {
 		return err
 	}
-	if err := fsutil.WriteFileAtomic(dest+".credit", []byte(credit+"\n")); err != nil {
+	if err := writeSidecars(dest, credit, title); err != nil {
 		return err
 	}
 	if err := fsutil.WriteFileAtomic(dest, raw); err != nil {
@@ -72,7 +71,7 @@ func writeRecentFiles(dest, src, credit, dir string) error {
 	return nil
 }
 
-func saveRecent(dir, src, credit string) error {
+func saveRecent(dir, src, credit, title string) error {
 	if !shouldSaveRecent(dir, src) {
 		return nil
 	}
@@ -80,7 +79,7 @@ func saveRecent(dir, src, credit string) error {
 		return err
 	}
 	dest := filepath.Join(dir, time.Now().UTC().Format("20060102T150405.000000000")+recentExt(src))
-	return writeRecentFiles(dest, src, credit, dir)
+	return writeRecentFiles(dest, src, credit, title, dir)
 }
 
 func sameDir(path, dir string) bool {

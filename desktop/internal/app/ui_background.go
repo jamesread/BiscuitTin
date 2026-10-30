@@ -7,6 +7,7 @@ import (
 	"unsafe"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/jamesread/biscuittin/internal/backgrounds"
 	"github.com/jamesread/biscuittin/internal/contrast"
 )
 
@@ -16,6 +17,7 @@ type uiBackground struct {
 	curGrid  *contrast.LumGrid
 	prevGrid *contrast.LumGrid
 	credit   string
+	title    string
 	cur      rl.Texture2D
 	prev     rl.Texture2D
 	fade     float32
@@ -23,8 +25,8 @@ type uiBackground struct {
 
 // setBackground uploads a decoded image and starts a crossfade to it.
 // Must run on the main thread.
-func (u *ui) setBackground(img *image.RGBA, grid *contrast.LumGrid, credit string) {
-	t := textureFromRGBA(img)
+func (u *ui) setBackground(img backgrounds.Image) {
+	t := textureFromRGBA(img.Pix)
 	if t.ID == 0 {
 		return
 	}
@@ -32,8 +34,8 @@ func (u *ui) setBackground(img *image.RGBA, grid *contrast.LumGrid, credit strin
 		rl.UnloadTexture(u.bgTex.prev)
 	}
 	u.bgTex.prev, u.bgTex.prevGrid = u.bgTex.cur, u.bgTex.curGrid
-	u.bgTex.cur, u.bgTex.curGrid = t, grid
-	u.bgTex.credit = credit
+	u.bgTex.cur, u.bgTex.curGrid = t, img.Grid
+	u.bgTex.credit, u.bgTex.title = img.Credit, img.Title
 	u.bgTex.fade = 0
 }
 
@@ -47,7 +49,7 @@ func (u *ui) clearBackground() {
 	}
 	u.bgTex.prev, u.bgTex.prevGrid = u.bgTex.cur, u.bgTex.curGrid
 	u.bgTex.cur, u.bgTex.curGrid = rl.Texture2D{}, nil
-	u.bgTex.credit = ""
+	u.bgTex.credit, u.bgTex.title = "", ""
 	u.bgTex.fade = 0
 }
 
@@ -185,15 +187,36 @@ func (u *ui) backdropFor(x0, y0, x1, y1 float32) contrast.RGB {
 	return out
 }
 
+// drawCredit draws the image title and attribution bottom right, each
+// with its own setting. The title sits above the credit when both show.
 func (u *ui) drawCredit(w, h, s, margin float32) {
-	if u.bgTex.credit == "" || u.bgTex.cur.ID == 0 || u.settings.HideAttribution {
+	if u.bgTex.cur.ID == 0 {
 		return
 	}
-	size := 22 * s
-	// Some authors' credit lines are long; keep it to the right of the hints.
-	credit := u.fitText(u.bgTex.credit, size, w*0.5)
-	m := u.measure(credit, size)
-	u.text(credit, w-margin-m.X, h-36*s, size, rl.ColorAlpha(rl.RayWhite, 0.45*u.bgTex.fade))
+	y := h - 36*s
+	if u.showCredit() {
+		u.drawCornerLine(u.bgTex.credit, w, y, margin, 22*s, 0.45)
+		y -= 34 * s
+	}
+	if u.showImageTitle() {
+		u.drawCornerLine(u.bgTex.title, w, y-6*s, margin, 28*s, 0.75)
+	}
+}
+
+func (u *ui) showCredit() bool {
+	return u.bgTex.credit != "" && !u.settings.HideAttribution
+}
+
+func (u *ui) showImageTitle() bool {
+	return u.bgTex.title != "" && u.settings.ShowImageTitle
+}
+
+// drawCornerLine right-aligns one line, kept to the right of the hints as
+// some credits and titles are long.
+func (u *ui) drawCornerLine(line string, w, y, margin, size, alpha float32) {
+	line = u.fitText(line, size, w*0.5)
+	m := u.measure(line, size)
+	u.text(line, w-margin-m.X, y, size, rl.ColorAlpha(rl.RayWhite, alpha*u.bgTex.fade))
 }
 
 // drawCover scales a texture to fill the screen, cropping the overflow.

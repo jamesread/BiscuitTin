@@ -21,6 +21,7 @@ var defaultYAML []byte
 type Config struct {
 	Fullscreen         *bool               `yaml:"fullscreen"`
 	HideOnLaunch       *bool               `yaml:"hideOnLaunch"`
+	KeepAwake          *bool               `yaml:"keepAwake"`
 	IdleFadeSeconds    *float64            `yaml:"idleFadeSeconds"`
 	HomeAssistant      HomeAssistantConfig `yaml:"homeassistant"`
 	CacheDir           string              `yaml:"cacheDir"`
@@ -33,6 +34,9 @@ type Config struct {
 	OliveTin           OliveTinConfig      `yaml:"olivetin"`
 	IconProviders      []string            `yaml:"iconProviders"`
 	Entries            []Entry             `yaml:"entries"`
+	ScreenOff          ScreenOffConfig     `yaml:"screenOff"`
+	Volume             VolumeConfig        `yaml:"volume"`
+	CEC                CECConfig           `yaml:"cec"`
 	Backgrounds        BackgroundConfig    `yaml:"backgrounds"`
 	RSS                RSSConfig           `yaml:"rss"`
 	WebControl         WebControlConfig    `yaml:"webControl"`
@@ -58,6 +62,7 @@ type Entry struct {
 	Title         string            `yaml:"title"`
 	Subtitle      string            `yaml:"subtitle"`
 	Workdir       string            `yaml:"workdir"`
+	WindowClass   string            `yaml:"windowClass"`
 	Icon          string            `yaml:"icon"`
 	IconQuery     string            `yaml:"iconQuery"`
 	IconStyle     string            `yaml:"iconStyle"`
@@ -153,6 +158,30 @@ func ApplyDefaults(cfg *Config) {
 	applyRSSDefaults(cfg)
 	applyFontDefault(cfg)
 	expandEntryIcons(cfg)
+	applyCommandDefaults(cfg)
+}
+
+// applyCommandDefaults fills in unset commands. An empty list, as opposed
+// to a missing one, stays empty.
+func applyCommandDefaults(cfg *Config) {
+	if cfg.ScreenOff.OffCommand == nil {
+		cfg.ScreenOff.OffCommand = []string{"xset", "dpms", "force", "off"}
+	}
+	if cfg.ScreenOff.OnCommand == nil {
+		cfg.ScreenOff.OnCommand = []string{"xset", "dpms", "force", "on"}
+	}
+	if cfg.Volume.UpCommand == nil {
+		cfg.Volume.UpCommand = []string{"wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", "5%+"}
+	}
+	if cfg.Volume.DownCommand == nil {
+		cfg.Volume.DownCommand = []string{"wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-"}
+	}
+	if cfg.Volume.GetCommand == nil {
+		cfg.Volume.GetCommand = []string{"wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"}
+	}
+	if len(cfg.CEC.Command) == 0 {
+		cfg.CEC.Command = []string{"cec-client", "-d", "16", "-t", "p", "-o", "BiscuitTin"}
+	}
 }
 
 func applyChromeDefaults(cfg *Config) {
@@ -294,6 +323,30 @@ type HomeAssistantConfig struct {
 }
 
 // WebControlConfig configures the web remote (More > Settings > Web control).
+// ScreenOffConfig is how the screen is switched off after More > Settings >
+// Screen off after, and back on at the next press. The window goes black
+// either way; [] runs nothing.
+// VolumeConfig is how LB/RB (and - / =) change the volume. getCommand
+// prints the level, as wpctl get-volume does ("Volume: 0.45 [MUTED]").
+type VolumeConfig struct {
+	UpCommand   []string `yaml:"upCommand"`
+	DownCommand []string `yaml:"downCommand"`
+	GetCommand  []string `yaml:"getCommand"`
+}
+
+type ScreenOffConfig struct {
+	OffCommand []string `yaml:"offCommand"`
+	OnCommand  []string `yaml:"onCommand"`
+}
+
+// CECConfig reads TV remote buttons over HDMI-CEC with libCEC's
+// cec-client. Kernel CEC drivers already present the remote as a keyboard,
+// so they need nothing here.
+type CECConfig struct {
+	Command []string `yaml:"command"`
+	Enabled bool     `yaml:"enabled"`
+}
+
 type WebControlConfig struct {
 	Port int `yaml:"port"`
 }

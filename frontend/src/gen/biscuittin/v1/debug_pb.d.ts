@@ -176,6 +176,20 @@ export declare type GetDiagnosticsResponse = Message<"biscuittin.v1.GetDiagnosti
    * @generated from field: string web_control = 21;
    */
   webControl: string;
+
+  /**
+   * rss is the RSS feed status, e.g. "3 feeds, 42 articles" or "Off".
+   *
+   * @generated from field: string rss = 22;
+   */
+  rss: string;
+
+  /**
+   * cec is the HDMI-CEC status, e.g. "Off" or "cec-client running".
+   *
+   * @generated from field: string cec = 23;
+   */
+  cec: string;
 };
 
 /**
@@ -308,8 +322,8 @@ export declare const MonitorSchema: GenMessage<Monitor>;
  */
 export declare const DebugService: GenService<{
   /**
-   * GetDiagnostics returns the facts shown on More > Diagnostics, plus
-   * window and monitor sizes.
+   * GetDiagnostics returns the facts shown on More > Diagnostics > App
+   * diagnostics, plus window and monitor sizes.
    *
    * @generated from rpc biscuittin.v1.DebugService.GetDiagnostics
    */

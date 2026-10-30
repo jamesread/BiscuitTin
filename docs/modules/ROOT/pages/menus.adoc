@@ -10,18 +10,23 @@ image::screenshots/more.png[More menu]
 
 | Integrations | Lists from xref:integrations.adoc[OliveTin and Home Assistant], to pin as tiles. Unconfigured sources stay in the list as *Needs YAML config*.
 | Settings | The settings below.
-| Gamepad info | Each connected gamepad's name, axes and held buttons, live.
-| Audio diagnostics | Whether the audio device opened, the sound server found, the runtime dir (flagged when another user owns it, which silences sound), volume and menu sounds. A or kbd:[Enter] plays a test sound.
-| Diagnostics | Version, display, primary input, paths and integration addresses.
-| System | Exit BiscuitTin, or reboot or power off the machine.
+| Diagnostics | *App diagnostics*: version, display, primary input, paths and integration addresses. *Input devices diagnostics*: each connected gamepad's name, axes and held buttons, live, and its battery charge when the driver reports one. *Audio diagnostics*: whether the audio device opened, the sound server found, the runtime dir (flagged when another user owns it, which silences sound), volume and menu sounds; A or kbd:[Enter] plays a test sound.
+| System | Exit BiscuitTin, reload the config, suspend, reboot or power off the machine, or set a sleep timer.
 |===
 
 == System
 
 *Exit* leaves BiscuitTin (same as kbd:[Ctrl+Q]).
 kbd:[Esc] on the home screen asks first, then exits.
-*Reboot* and *Power off* run `systemctl reboot` and `systemctl poweroff` on the host (via `flatpak-spawn --host` in the Flatpak).
-Both ask first: *Cancel* is selected, then the action.
+*Reload config* reads the config file again straight away. Saving the file does the same within a couple of seconds; see xref:config.adoc#reloading[Reloading].
+*Suspend*, *Reboot* and *Power off* run `systemctl suspend`, `systemctl reboot` and `systemctl poweroff` on the host (via `flatpak-spawn --host` in the Flatpak).
+All three ask first: *Cancel* is selected, then the action.
+
+*Sleep timer* suspends or powers off the machine after 30, 60, 90 or 120 minutes; left and right pick the time, which starts counting straight away, and *Off* stops it.
+*When it ends* picks *Suspend* (the default) or *Power off*.
+The time left shows in the header, and the timer keeps counting while an app is in front.
+A minute before the end, the launcher comes to the front with a countdown: *Cancel timer* (selected) or B stops it, and *Suspend now* or *Power off now* doesn't wait.
+The timer lasts until BiscuitTin exits; the *When it ends* choice is saved.
 
 == Settings
 
@@ -33,15 +38,27 @@ Settings are grouped under titles. The titles are not selectable; up and down sk
 |===
 | Group | Setting | Meaning
 
+| Home screen | Arrange tiles | Reorder and hide tiles; see <<arrange>>. The value counts hidden tiles. Moving a tile sets *Tile order* back to *Your order*.
+| Home screen | Tile order | *Your order* (the default) or *Recently used*: the tiles launched most recently first, then the rest in your order. The tiles re-sort when the launcher comes back from an app, with the last one used selected, so nothing moves while you browse.
 | Backgrounds | Background images | Show rotating xref:backgrounds.adoc[background images].
 | Backgrounds | Next image every | How often the image changes, from 1 minute to 1 day.
 | Backgrounds | Image attribution | Show the photographer and licence, bottom right.
+| Backgrounds | Image title | Show the picture's title above the attribution, separately from it. *Hidden* by default. Picsum photos have no titles.
 | RSS | RSS headlines | Show xref:rss.adoc[idle headlines]. Without `rss.feeds` this row is *Needs YAML config*; with feeds, On or Off (On by default).
 | RSS | Next headline every | How long each RSS article stays on the idle screen, from 1 minute to 1 day.
 | Display | Control help | Show the control hints in the footer.
+| Display | Menu sounds | Play a click when moving, selecting and going back in the menus. *On* by default. The Audio diagnostics test sound plays either way.
+| Display | Interface size | *Small*, *Normal*, *Large* or *Extra large*: everything on screen scales together, on top of fitting the window. *Normal* by default.
+| Display | Theme | Sets *Focus border*, *Focus background* and *Accent text* together: *Accent*, *Mono*, *Ocean*, *Sunset*, *Forest* or *Royal*. Shows *Custom* when the three are set separately.
+| Display | Focus border | Colour of the border round the selected tile, menu row or action. *Accent* (the config's `accent`) by default, or White, Orange, Red, Pink, Purple, Blue, Teal or Green. A swatch beside the name shows the colour.
+| Display | Focus background | Tint behind the selected menu row or action, from the same colours. *Accent* by default.
+| Display | Accent text | Colour of menu group titles, the focused row's value, RSS sources, pin boxes, held gamepad buttons and recent keys, from the same colours. *Accent* by default.
+| Display | Screen off after | Black out the screen after this long without input: *Never* (the default), or 5 minutes to 4 hours. It also runs `screenOff.offCommand`, by default `xset dpms force off`; see xref:config.adoc[]. The next press only wakes it.
 | Web control | Web control | Run the xref:web-control.adoc[phone web remote]. *Off by default.*
 | Web control | QR code on home screen | Show the web remote's address as a QR code: *None*, *Main menu* (beside the tiles) or *Idle screen* (bottom right). Without web control this row is *Needs web control*. *None* by default.
 | Web control | Address | This machine's LAN IP and the web remote port, shown even while web control is off.
+| Web control | Pairing code | The code phones need; see xref:web-control.adoc#pairing[Pairing]. Made the first time web control is on.
+| Web control | New pairing code | Unpairs every phone and makes a new code. Asks first.
 |===
 
 Two-way choices are radio groups: left and right pick an option, A cycles round.
@@ -50,3 +67,14 @@ Stepped values change with left and right, or cycle with A.
 Choices are saved to `~/.local/state/biscuittin/settings.yaml` (or `$XDG_STATE_HOME/biscuittin/settings.yaml`), separately from your config file.
 The config file is written only when it is missing (a default to edit); on-screen settings never change it.
 Saved settings take precedence over the config's defaults.
+
+[[arrange]]
+== Arranging tiles
+
+*More > Settings > Arrange tiles* lists every configured entry and pinned action in home screen order, hidden ones included.
+
+* Left and right switch a tile between *Shown* and *Hidden*. Hidden tiles stay configured, and can still be pinned or unpinned; they just aren't on the home screen.
+* A picks a tile up. Up and down then move it, and A or Back drops it.
+
+The order is saved by entry title (and by action for pinned tiles), so it survives editing the config.
+New entries go after the arranged ones. *More* is always last.

@@ -36,7 +36,7 @@ A Flatpak app keeps its files in its own directory, `~/.var/app/io.github.jamesr
 | Caches and app logs | `~/.var/app/io.github.jamesread.biscuittin/cache/biscuittin/`
 |===
 
-*More > Diagnostics* shows the paths in use.
+*More > Diagnostics > App diagnostics* shows the paths in use.
 To use files elsewhere, such as images for the `local` background provider, give the app access first, for example:
 
 [source,shell]

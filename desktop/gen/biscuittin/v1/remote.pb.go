@@ -34,6 +34,10 @@ const (
 	Button_BUTTON_SELECT Button = 5
 	// BUTTON_BACK is B / Esc.
 	Button_BUTTON_BACK Button = 6
+	// BUTTON_VOLUME_UP and BUTTON_VOLUME_DOWN run volume.upCommand and
+	// volume.downCommand, as LB and RB do.
+	Button_BUTTON_VOLUME_UP   Button = 7
+	Button_BUTTON_VOLUME_DOWN Button = 8
 )
 
 // Enum value maps for Button.
@@ -46,6 +50,8 @@ var (
 		4: "BUTTON_RIGHT",
 		5: "BUTTON_SELECT",
 		6: "BUTTON_BACK",
+		7: "BUTTON_VOLUME_UP",
+		8: "BUTTON_VOLUME_DOWN",
 	}
 	Button_value = map[string]int32{
 		"BUTTON_UNSPECIFIED": 0,
@@ -55,6 +61,8 @@ var (
 		"BUTTON_RIGHT":       4,
 		"BUTTON_SELECT":      5,
 		"BUTTON_BACK":        6,
+		"BUTTON_VOLUME_UP":   7,
+		"BUTTON_VOLUME_DOWN": 8,
 	}
 )
 
@@ -440,11 +448,91 @@ func (*ActivateTileResponse) Descriptor() ([]byte, []int) {
 	return file_biscuittin_v1_remote_proto_rawDescGZIP(), []int{6}
 }
 
+type GetRemoteDiagnosticsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRemoteDiagnosticsRequest) Reset() {
+	*x = GetRemoteDiagnosticsRequest{}
+	mi := &file_biscuittin_v1_remote_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRemoteDiagnosticsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRemoteDiagnosticsRequest) ProtoMessage() {}
+
+func (x *GetRemoteDiagnosticsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_biscuittin_v1_remote_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRemoteDiagnosticsRequest.ProtoReflect.Descriptor instead.
+func (*GetRemoteDiagnosticsRequest) Descriptor() ([]byte, []int) {
+	return file_biscuittin_v1_remote_proto_rawDescGZIP(), []int{7}
+}
+
+type GetRemoteDiagnosticsResponse struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Diagnostics   *GetDiagnosticsResponse `protobuf:"bytes,1,opt,name=diagnostics,proto3" json:"diagnostics,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRemoteDiagnosticsResponse) Reset() {
+	*x = GetRemoteDiagnosticsResponse{}
+	mi := &file_biscuittin_v1_remote_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRemoteDiagnosticsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRemoteDiagnosticsResponse) ProtoMessage() {}
+
+func (x *GetRemoteDiagnosticsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_biscuittin_v1_remote_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRemoteDiagnosticsResponse.ProtoReflect.Descriptor instead.
+func (*GetRemoteDiagnosticsResponse) Descriptor() ([]byte, []int) {
+	return file_biscuittin_v1_remote_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *GetRemoteDiagnosticsResponse) GetDiagnostics() *GetDiagnosticsResponse {
+	if x != nil {
+		return x.Diagnostics
+	}
+	return nil
+}
+
 var File_biscuittin_v1_remote_proto protoreflect.FileDescriptor
 
 const file_biscuittin_v1_remote_proto_rawDesc = "" +
 	"\n" +
-	"\x1abiscuittin/v1/remote.proto\x12\rbiscuittin.v1\"\x11\n" +
+	"\x1abiscuittin/v1/remote.proto\x12\rbiscuittin.v1\x1a\x19biscuittin/v1/debug.proto\"\x11\n" +
 	"\x0fGetStateRequest\"\x80\x01\n" +
 	"\x04Tile\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
@@ -463,7 +551,10 @@ const file_biscuittin_v1_remote_proto_rawDesc = "" +
 	"\x13PressButtonResponse\"'\n" +
 	"\x13ActivateTileRequest\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\"\x16\n" +
-	"\x14ActivateTileResponse*\x87\x01\n" +
+	"\x14ActivateTileResponse\"\x1d\n" +
+	"\x1bGetRemoteDiagnosticsRequest\"g\n" +
+	"\x1cGetRemoteDiagnosticsResponse\x12G\n" +
+	"\vdiagnostics\x18\x01 \x01(\v2%.biscuittin.v1.GetDiagnosticsResponseR\vdiagnostics*\xb5\x01\n" +
 	"\x06Button\x12\x16\n" +
 	"\x12BUTTON_UNSPECIFIED\x10\x00\x12\r\n" +
 	"\tBUTTON_UP\x10\x01\x12\x0f\n" +
@@ -471,11 +562,14 @@ const file_biscuittin_v1_remote_proto_rawDesc = "" +
 	"\vBUTTON_LEFT\x10\x03\x12\x10\n" +
 	"\fBUTTON_RIGHT\x10\x04\x12\x11\n" +
 	"\rBUTTON_SELECT\x10\x05\x12\x0f\n" +
-	"\vBUTTON_BACK\x10\x062\x8b\x02\n" +
+	"\vBUTTON_BACK\x10\x06\x12\x14\n" +
+	"\x10BUTTON_VOLUME_UP\x10\a\x12\x16\n" +
+	"\x12BUTTON_VOLUME_DOWN\x10\b2\xfc\x02\n" +
 	"\rRemoteService\x12K\n" +
 	"\bGetState\x12\x1e.biscuittin.v1.GetStateRequest\x1a\x1f.biscuittin.v1.GetStateResponse\x12T\n" +
 	"\vPressButton\x12!.biscuittin.v1.PressButtonRequest\x1a\".biscuittin.v1.PressButtonResponse\x12W\n" +
-	"\fActivateTile\x12\".biscuittin.v1.ActivateTileRequest\x1a#.biscuittin.v1.ActivateTileResponseB@Z>github.com/jamesread/biscuittin/gen/biscuittin/v1;biscuittinv1b\x06proto3"
+	"\fActivateTile\x12\".biscuittin.v1.ActivateTileRequest\x1a#.biscuittin.v1.ActivateTileResponse\x12o\n" +
+	"\x14GetRemoteDiagnostics\x12*.biscuittin.v1.GetRemoteDiagnosticsRequest\x1a+.biscuittin.v1.GetRemoteDiagnosticsResponseB@Z>github.com/jamesread/biscuittin/gen/biscuittin/v1;biscuittinv1b\x06proto3"
 
 var (
 	file_biscuittin_v1_remote_proto_rawDescOnce sync.Once
@@ -490,31 +584,37 @@ func file_biscuittin_v1_remote_proto_rawDescGZIP() []byte {
 }
 
 var file_biscuittin_v1_remote_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_biscuittin_v1_remote_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_biscuittin_v1_remote_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_biscuittin_v1_remote_proto_goTypes = []any{
-	(Button)(0),                  // 0: biscuittin.v1.Button
-	(*GetStateRequest)(nil),      // 1: biscuittin.v1.GetStateRequest
-	(*Tile)(nil),                 // 2: biscuittin.v1.Tile
-	(*GetStateResponse)(nil),     // 3: biscuittin.v1.GetStateResponse
-	(*PressButtonRequest)(nil),   // 4: biscuittin.v1.PressButtonRequest
-	(*PressButtonResponse)(nil),  // 5: biscuittin.v1.PressButtonResponse
-	(*ActivateTileRequest)(nil),  // 6: biscuittin.v1.ActivateTileRequest
-	(*ActivateTileResponse)(nil), // 7: biscuittin.v1.ActivateTileResponse
+	(Button)(0),                          // 0: biscuittin.v1.Button
+	(*GetStateRequest)(nil),              // 1: biscuittin.v1.GetStateRequest
+	(*Tile)(nil),                         // 2: biscuittin.v1.Tile
+	(*GetStateResponse)(nil),             // 3: biscuittin.v1.GetStateResponse
+	(*PressButtonRequest)(nil),           // 4: biscuittin.v1.PressButtonRequest
+	(*PressButtonResponse)(nil),          // 5: biscuittin.v1.PressButtonResponse
+	(*ActivateTileRequest)(nil),          // 6: biscuittin.v1.ActivateTileRequest
+	(*ActivateTileResponse)(nil),         // 7: biscuittin.v1.ActivateTileResponse
+	(*GetRemoteDiagnosticsRequest)(nil),  // 8: biscuittin.v1.GetRemoteDiagnosticsRequest
+	(*GetRemoteDiagnosticsResponse)(nil), // 9: biscuittin.v1.GetRemoteDiagnosticsResponse
+	(*GetDiagnosticsResponse)(nil),       // 10: biscuittin.v1.GetDiagnosticsResponse
 }
 var file_biscuittin_v1_remote_proto_depIdxs = []int32{
-	2, // 0: biscuittin.v1.GetStateResponse.tiles:type_name -> biscuittin.v1.Tile
-	0, // 1: biscuittin.v1.PressButtonRequest.button:type_name -> biscuittin.v1.Button
-	1, // 2: biscuittin.v1.RemoteService.GetState:input_type -> biscuittin.v1.GetStateRequest
-	4, // 3: biscuittin.v1.RemoteService.PressButton:input_type -> biscuittin.v1.PressButtonRequest
-	6, // 4: biscuittin.v1.RemoteService.ActivateTile:input_type -> biscuittin.v1.ActivateTileRequest
-	3, // 5: biscuittin.v1.RemoteService.GetState:output_type -> biscuittin.v1.GetStateResponse
-	5, // 6: biscuittin.v1.RemoteService.PressButton:output_type -> biscuittin.v1.PressButtonResponse
-	7, // 7: biscuittin.v1.RemoteService.ActivateTile:output_type -> biscuittin.v1.ActivateTileResponse
-	5, // [5:8] is the sub-list for method output_type
-	2, // [2:5] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	2,  // 0: biscuittin.v1.GetStateResponse.tiles:type_name -> biscuittin.v1.Tile
+	0,  // 1: biscuittin.v1.PressButtonRequest.button:type_name -> biscuittin.v1.Button
+	10, // 2: biscuittin.v1.GetRemoteDiagnosticsResponse.diagnostics:type_name -> biscuittin.v1.GetDiagnosticsResponse
+	1,  // 3: biscuittin.v1.RemoteService.GetState:input_type -> biscuittin.v1.GetStateRequest
+	4,  // 4: biscuittin.v1.RemoteService.PressButton:input_type -> biscuittin.v1.PressButtonRequest
+	6,  // 5: biscuittin.v1.RemoteService.ActivateTile:input_type -> biscuittin.v1.ActivateTileRequest
+	8,  // 6: biscuittin.v1.RemoteService.GetRemoteDiagnostics:input_type -> biscuittin.v1.GetRemoteDiagnosticsRequest
+	3,  // 7: biscuittin.v1.RemoteService.GetState:output_type -> biscuittin.v1.GetStateResponse
+	5,  // 8: biscuittin.v1.RemoteService.PressButton:output_type -> biscuittin.v1.PressButtonResponse
+	7,  // 9: biscuittin.v1.RemoteService.ActivateTile:output_type -> biscuittin.v1.ActivateTileResponse
+	9,  // 10: biscuittin.v1.RemoteService.GetRemoteDiagnostics:output_type -> biscuittin.v1.GetRemoteDiagnosticsResponse
+	7,  // [7:11] is the sub-list for method output_type
+	3,  // [3:7] is the sub-list for method input_type
+	3,  // [3:3] is the sub-list for extension type_name
+	3,  // [3:3] is the sub-list for extension extendee
+	0,  // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_biscuittin_v1_remote_proto_init() }
@@ -522,13 +622,14 @@ func file_biscuittin_v1_remote_proto_init() {
 	if File_biscuittin_v1_remote_proto != nil {
 		return
 	}
+	file_biscuittin_v1_debug_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_biscuittin_v1_remote_proto_rawDesc), len(file_biscuittin_v1_remote_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   7,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

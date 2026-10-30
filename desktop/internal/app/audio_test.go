@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/jamesread/biscuittin/internal/settings"
 )
 
 func fakeAudioEnv(vars map[string]string, uid int) audioEnv {
@@ -58,23 +60,37 @@ func TestRuntimeDirFlagsOtherOwner(t *testing.T) {
 }
 
 func TestHandleAudioLeavesOnBackOnly(t *testing.T) {
-	u := &ui{screen: screenAudio}
+	u := &ui{screen: screenAudio, settings: &settings.Settings{}}
 	u.handleAudio(actionActivate)
 	if u.screen != screenAudio {
 		t.Fatal("A should play the test sound, not leave")
 	}
 	u.handleAudio(actionBack)
-	if u.screen != screenMore {
-		t.Fatalf("Back left to %v; want More", u.screen)
+	if u.screen != screenDiagnosticsMenu {
+		t.Fatalf("Back left to %v; want Diagnostics menu", u.screen)
 	}
 }
 
-func TestMoreMenuHasAudioDiagnostics(t *testing.T) {
+func TestDiagnosticsMenuHasAudioDiagnostics(t *testing.T) {
 	u := &ui{}
-	for _, it := range u.moreMenu() {
+	for _, it := range u.diagnosticsMenu() {
 		if it.title == "Audio diagnostics" && it.target == screenAudio {
 			return
 		}
 	}
-	t.Fatal("More menu has no Audio diagnostics item")
+	t.Fatal("Diagnostics menu has no Audio diagnostics item")
+}
+
+func TestMenuSoundsMuted(t *testing.T) {
+	u := &ui{settings: &settings.Settings{}}
+	if u.menuSoundsMuted() {
+		t.Fatal("menu sounds should default on")
+	}
+	u.settings.MuteMenuSounds = true
+	if !u.menuSoundsMuted() {
+		t.Fatal("MuteMenuSounds should mute")
+	}
+	if got := menuSoundsLabel(3, true); got != "3 of 3 loaded, off in Settings" {
+		t.Errorf("label = %q", got)
+	}
 }

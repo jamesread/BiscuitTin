@@ -34,7 +34,7 @@ func TestSaveRecentKeepsFiveNewest(t *testing.T) {
 	writeTestPNG(t, src)
 
 	for i := range 7 {
-		if err := saveRecent(dir, src, fmt.Sprintf("credit-%d", i)); err != nil {
+		if err := saveRecent(dir, src, fmt.Sprintf("credit-%d", i), ""); err != nil {
 			t.Fatal(err)
 		}
 		// Distinct mtimes so prune order is deterministic.
@@ -173,7 +173,7 @@ func TestSaveRecentSkipsCopyFromRecentDir(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "already.png")
 	writeTestPNG(t, src)
-	if err := saveRecent(dir, src, "x"); err != nil {
+	if err := saveRecent(dir, src, "x", ""); err != nil {
 		t.Fatal(err)
 	}
 	if n := len(cachedImages(dir)); n != 1 {

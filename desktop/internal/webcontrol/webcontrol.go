@@ -1,5 +1,6 @@
 // Package webcontrol serves the phone web remote and its ConnectRPC API.
-// It only runs once switched on in Settings (off by default).
+// It only runs once switched on in Settings (off by default), and every
+// call needs the pairing code (see pairing.go).
 package webcontrol
 
 import (
@@ -61,15 +62,37 @@ type Command struct {
 // drains commands.
 type Bridge struct {
 	state    *pb.GetStateResponse
+	diag     *pb.GetDiagnosticsResponse
 	Commands chan Command
+	pairing  pairing
 	mu       sync.Mutex
 }
 
 func NewBridge() *Bridge {
 	return &Bridge{
 		state:    &pb.GetStateResponse{},
+		diag:     &pb.GetDiagnosticsResponse{},
 		Commands: make(chan Command, 32),
 	}
+}
+
+// SetCode sets the pairing code every call must carry. Until it is set,
+// every call is refused.
+func (b *Bridge) SetCode(code string) {
+	b.pairing.set(code)
+}
+
+// PublishDiagnostics sets what GetDiagnostics returns.
+func (b *Bridge) PublishDiagnostics(d *pb.GetDiagnosticsResponse) {
+	b.mu.Lock()
+	b.diag = d
+	b.mu.Unlock()
+}
+
+func (b *Bridge) diagnostics() *pb.GetDiagnosticsResponse {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.diag
 }
 
 func (b *Bridge) Publish(s *pb.GetStateResponse) {
@@ -102,6 +125,10 @@ type remoteService struct {
 
 func (r *remoteService) GetState(context.Context, *connect.Request[pb.GetStateRequest]) (*connect.Response[pb.GetStateResponse], error) {
 	return connect.NewResponse(r.bridge.snapshot()), nil
+}
+
+func (r *remoteService) GetRemoteDiagnostics(context.Context, *connect.Request[pb.GetRemoteDiagnosticsRequest]) (*connect.Response[pb.GetRemoteDiagnosticsResponse], error) {
+	return connect.NewResponse(&pb.GetRemoteDiagnosticsResponse{Diagnostics: r.bridge.diagnostics()}), nil
 }
 
 func (r *remoteService) PressButton(_ context.Context, req *connect.Request[pb.PressButtonRequest]) (*connect.Response[pb.PressButtonResponse], error) {
@@ -137,7 +164,8 @@ func (r *remoteService) knownTile(key string) bool {
 
 func newWebControlMux(bridge *Bridge) http.Handler {
 	mux := http.NewServeMux()
-	path, handler := biscuittinv1connect.NewRemoteServiceHandler(&remoteService{bridge: bridge})
+	path, handler := biscuittinv1connect.NewRemoteServiceHandler(&remoteService{bridge: bridge},
+		connect.WithInterceptors(bridge.pairing.interceptor()))
 	mux.Handle(path, handler)
 
 	dist, err := fs.Sub(webDist, "webdist")

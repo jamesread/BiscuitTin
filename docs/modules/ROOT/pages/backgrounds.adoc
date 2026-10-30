@@ -16,6 +16,9 @@ image::screenshots/home-idle.png[Ambient background]
 The photographer and licence are shown bottom right.
 For `local`, put the credit line in a `<image>.credit` file next to each image.
 
+*More > Settings > Image title* also shows the picture's title above the credit, separately from the attribution.
+Wikimedia titles come from Commons. `local` images use a `<image>.title` file next to the image, else the file name (`Lake_Bled.jpg` shows as `Lake Bled`). Picsum photos have no titles.
+
 [source,yaml]
 ----
 backgrounds:

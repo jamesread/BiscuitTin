@@ -11,8 +11,10 @@ BiscuitTin works with a gamepad, a remote control (most present themselves as a 
 | B or kbd:[Backspace] | Back. On the home screen, hide the tiles.
 | kbd:[Esc] | Back in menus. On the home screen, ask to exit.
 | Hold Guide (Xbox button) | Bring the launcher back while an app is running.
+| LB / RB (L1 / R1), kbd:[-] / kbd:[=] | Volume down / up, on every screen. See <<volume>>.
 | Click the tray icon | Show the launcher, when a tray is available.
 | Tray menu *Exit*, kbd:[Ctrl+Q] or *More > System > Exit* | Quit without asking.
+| TV remote over HDMI-CEC | Arrows move, Select, Enter or Play select, Exit, Back or Root menu go back. See <<cec>>.
 |===
 
 == Control help
@@ -22,7 +24,55 @@ Gamepad hints use button glyphs matched to the controller: Xbox-style, or PlaySt
 Keyboard and remote hints show keycaps.
 
 Hide the hints with *More > Settings > Control help*.
-*More > Diagnostics* shows which device is primary, and *More > Gamepad info* shows each connected gamepad's buttons and sticks live.
+*More > Diagnostics > App diagnostics* shows which device is primary, and *More > Diagnostics > Input devices diagnostics* shows each connected gamepad's buttons and sticks live, and the last few keyboard, remote and CEC presses.
+On that screen kbd:[Esc], kbd:[Backspace] and kbd:[Enter] leave, so press other keys to test them.
+
+[[volume]]
+== Volume
+
+LB and RB (L1 and R1 on PlayStation pads), or kbd:[-] and kbd:[=] (and the keypad kbd:[-] and kbd:[+]), turn the volume down and up in 5% steps.
+The level shows at the top of the screen for a couple of seconds.
+The xref:web-control.adoc[web remote] has *Vol −* and *Vol +* buttons, which also work while an app is in front.
+
+By default this runs `wpctl` (PipeWire) on the default output, capped at 100%.
+For PulseAudio or ALSA, set `volume.upCommand`, `volume.downCommand` and `volume.getCommand`; see xref:config.adoc[].
+The gamepad shoulder buttons only reach BiscuitTin while the launcher is showing.
+
+[[battery]]
+== Controller batteries
+
+Wireless controllers whose driver reports a battery (most Xbox, PlayStation and Switch pads on a current kernel) are checked every minute.
+Below 20%, or when the driver says *Low* or *Critical*, a message says so once, for example `DualSense Wireless Controller battery low (15%)`.
+It shows when the launcher next comes back if an app is in front, and warns again only after the controller has been charged.
+*Input devices diagnostics* shows each controller's charge beside its name.
+
+[[keep-awake]]
+== Screen blanking
+
+Games read gamepads directly, so the X server doesn't see them as activity, and the screensaver or DPMS (`xset s`, `xset dpms`) could blank the TV in the middle of a game.
+BiscuitTin reads the gamepads even while an app is in front, and resets the X idle timer when one is used, at most every 30 seconds.
+Set `keepAwake: false` to turn this off. On Wayland it does nothing.
+
+This is separate from *Screen off after*, BiscuitTin's own blanking, which only counts time on the launcher.
+
+[[cec]]
+== HDMI-CEC
+
+Many TVs send their own remote's buttons to the connected device over HDMI-CEC.
+
+* *Kernel CEC drivers* (Raspberry Pi, many ARM boards and some Intel graphics) present the TV remote as a keyboard. That already works, with nothing to set.
+* *libCEC adapters*, such as the Pulse-Eight USB-CEC adapter, need `cec-client` (from libCEC). Install it on the host and set:
++
+[source,yaml]
+----
+cec:
+  enabled: true
+----
+
+BiscuitTin then runs `cec-client` and reads the key presses from its log; set `cec.command` to change how it runs.
+If `cec-client` exits (for example, the adapter is unplugged), it is started again every 30 seconds.
+*App diagnostics* shows *HDMI-CEC* as running or not, and *Input devices diagnostics* lists CEC presses as, for example, `CEC up`.
+CEC presses wake the screen and the idle tiles, like any other input.
 
 == Idle and hiding the tiles
 

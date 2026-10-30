@@ -7,6 +7,20 @@ https://github.com/jamesread/biscuittin/blob/main/config.example.yaml[config.exa
 Paths may start with `~/` and may use `$ENV` variables.
 Settings changed on screen are stored separately; see xref:menus.adoc[].
 
+[[reloading]]
+== Reloading
+
+BiscuitTin checks the config file every couple of seconds and reloads it when it changes, or straight away from *More > System > Reload config*.
+A file that doesn't parse or has no entries is not applied: the running config stays, and a message says why.
+
+To check a file before saving it over the live one, run `biscuittin check` (or `biscuittin check -config <path>`).
+It is stricter than loading: it lists unknown keys (usually typos, which loading ignores), colours that aren't `#rrggbb`, entries with no command, and commands or Flatpaks that aren't installed.
+It exits 1 if it found anything, and never writes a default config.
+
+Tiles, colours, icons, integrations, backgrounds, RSS, HDMI-CEC and the launch and screen-off options follow straight away.
+Running apps stay attached to their tile, matched by title.
+`fullscreen`, `font` and `webControl.port` need a restart.
+
 == Appearance
 
 [cols="1,1,3"]
@@ -21,6 +35,11 @@ Settings changed on screen are stored separately; see xref:menus.adoc[].
 | `tileColor` | `#3d5a80` | Tile fill. Darkened automatically if needed, so white icons and letters on it meet WCAG AA contrast (4.5:1).
 | `font` | Noto Sans Bold or DejaVu Sans Bold | A TTF font file.
 | `idleFadeSeconds` | `20` | Fade the tiles out after this many seconds without input, while a background image or RSS headlines can be shown. `0` disables.
+| `screenOff.offCommand` | `[xset, dpms, force, off]` | Run when *Screen off after* blanks the screen. `[]` only blacks out the window. On Wayland, use your compositor's command, e.g. `[wlr-randr, --output, HDMI-A-1, --off]`.
+| `screenOff.onCommand` | `[xset, dpms, force, on]` | Run on the press that wakes the screen.
+| `volume.upCommand` | `[wpctl, set-volume, -l, "1.0", "@DEFAULT_AUDIO_SINK@", 5%+]` | Run by RB, kbd:[=] and the web remote's *Vol +*. See xref:controls.adoc#volume[Volume].
+| `volume.downCommand` | `[wpctl, set-volume, "@DEFAULT_AUDIO_SINK@", 5%-]` | Run by LB, kbd:[-] and *Vol −*.
+| `volume.getCommand` | `[wpctl, get-volume, "@DEFAULT_AUDIO_SINK@"]` | Prints the level for the on-screen bar: `Volume: 0.45`, `45%`, and `[MUTED]` are understood. `[]` shows the change without a level.
 |===
 
 == Launching
@@ -31,6 +50,7 @@ Settings changed on screen are stored separately; see xref:menus.adoc[].
 
 | `hideOnLaunch` | `true` | Hide the launcher while a launched app runs. Bring it back with Guide or the tray icon.
 | `restoreHoldSeconds` | `1.0` | How long to hold Guide to bring the launcher back.
+| `keepAwake` | `true` | Count gamepad use as activity, so the screensaver and DPMS don't blank the screen mid-game. See xref:controls.adoc#keep-awake[Screen blanking].
 | `logDir` | `cacheDir` | Launched apps write their output to `<logDir>/<entry title>.log`.
 | `cacheDir` | `~/.cache/biscuittin` | Downloaded and rendered icons and images.
 |===
@@ -53,7 +73,10 @@ Worked examples for the screenshot home screen (RetroArch, Steam, Kodi, Jellyfin
 | `iconQuery` | Icon search term, if not the title.
 | `iconStyle` | `mono` (a white glyph, the default) or `color` (brand colours).
 | `restoreOnExit` | Default `true`. Set `false` for commands that hand off to a running instance and exit straight away.
+| `windowClass` | The app's X11 `WM_CLASS` (either part, any case), for *Switch to it* when the window can't be found by process: Flatpak apps and hand-off launchers like Steam. Find it with `xprop WM_CLASS`.
 |===
+
+A tile whose command isn't installed is dimmed and says *Not installed*: BiscuitTin checks for the program on the host (or, for `flatpak run <id>`, the Flatpak) at startup and on each reload.
 
 == Icons and backgrounds
 
@@ -80,6 +103,8 @@ Worked examples for the screenshot home screen (RetroArch, Steam, Kodi, Jellyfin
 | `homeassistant.tokenFile` | `~/.config/biscuittin/homeassistant.token` | File holding a long-lived access token.
 | `homeassistant.token` | | The token itself. Prefer `tokenFile`.
 | `webControl.port` | `8137` | Web remote port, unless `$PORT` is set. The remote itself is switched on in Settings. See xref:web-control.adoc[].
+| `cec.enabled` | `false` | Read TV remote buttons over HDMI-CEC with libCEC's `cec-client`. See xref:controls.adoc#cec[HDMI-CEC].
+| `cec.command` | `[cec-client, -d, 16, -t, p, -o, BiscuitTin]` | The command to run. Its debug log must include libCEC's `key pressed:` lines.
 |===
 
 == RSS headlines

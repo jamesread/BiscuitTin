@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/jamesread/biscuittin/internal/contrast"
@@ -26,6 +27,9 @@ const (
 	screenConfirm
 	screenRunning
 	screenAudio
+	screenDiagnosticsMenu
+	screenArrange
+	screenSleep
 )
 
 // menuItem is one row of a list menu. It is a link (target, or open for
@@ -36,6 +40,7 @@ type menuItem struct {
 	open     func()
 	value    func() string
 	adjust   func(dir int)
+	swatch   func() rl.Color
 	radio    *radioGroup
 	title    string
 	target   screen
@@ -59,21 +64,31 @@ func (u *ui) moreMenu() []menuItem {
 			value: func() string { return fmt.Sprintf("%d pinned", len(u.settings.PinnedActions)) },
 		},
 		{title: "Settings", open: func() { u.openMenu(screenSettings) }},
-		{title: "Gamepad info", target: screenGamepads},
-		{title: "Audio diagnostics", target: screenAudio},
-		{title: "Diagnostics", target: screenDiagnostics},
+		{title: "Diagnostics", open: func() { u.openMenu(screenDiagnosticsMenu) }},
 		{title: "System", open: func() { u.openMenu(screenSystem) }},
 		{title: "Back", target: screenHome},
 	}
 }
 
-func (u *ui) systemMenu() []menuItem {
+func (u *ui) diagnosticsMenu() []menuItem {
 	return []menuItem{
-		{title: "Exit", open: func() { u.quit = true }},
-		{title: "Reboot", open: func() { u.openConfirm("Reboot this machine?", "Reboot", u.rebootHost) }},
-		{title: "Power off", open: func() { u.openConfirm("Power off this machine?", "Power off", u.poweroffHost) }},
+		{title: "App diagnostics", target: screenDiagnostics},
+		{title: "Input devices diagnostics", target: screenGamepads},
+		{title: "Audio diagnostics", target: screenAudio},
 		{title: "Back", open: func() { u.openMenu(screenMore) }},
 	}
+}
+
+func (u *ui) systemMenu() []menuItem {
+	items := []menuItem{
+		{title: "Exit", open: func() { u.quit = true }},
+		{title: "Reload config", open: func() { u.reloadRequested = true }},
+		{title: "Suspend", open: func() { u.openConfirm("Suspend this machine?", "Suspend", u.suspendHost) }},
+		{title: "Reboot", open: func() { u.openConfirm("Reboot this machine?", "Reboot", u.rebootHost) }},
+		{title: "Power off", open: func() { u.openConfirm("Power off this machine?", "Power off", u.poweroffHost) }},
+	}
+	items = append(items, u.sleepItems(u.settings, func() { u.settingsChanged = true })...)
+	return append(items, menuItem{title: "Back", open: func() { u.openMenu(screenMore) }})
 }
 
 func (u *ui) openConfirm(title, actionTitle string, do func()) {
@@ -108,8 +123,9 @@ func (u *ui) confirmMenu() []menuItem {
 	}
 }
 
-func (u *ui) openRunning(title string, kill, again func()) {
+func (u *ui) openRunning(title string, switchTo, kill, again func()) {
 	u.runningTitle = title + " is running"
+	u.runningSwitch = switchTo
 	u.runningKill = kill
 	u.runningAgain = again
 	u.screen = screenRunning
@@ -118,6 +134,7 @@ func (u *ui) openRunning(title string, kill, again func()) {
 
 func (u *ui) runningMenu() []menuItem {
 	return []menuItem{
+		{title: "Switch to it", open: u.runningSwitch},
 		{title: "Cancel", open: func() { u.screen = screenHome }},
 		{title: "Start another instance", open: u.runningAgain},
 		{title: "Stop", open: u.runningKill},
@@ -132,6 +149,11 @@ var runHostCommand = func(argv []string) error {
 
 func (u *ui) rebootHost() {
 	u.runSystem([]string{"systemctl", "reboot"}, "Could not reboot")
+}
+
+func (u *ui) suspendHost() {
+	u.runSystem([]string{"systemctl", "suspend"}, "Could not suspend")
+	u.screen = screenHome
 }
 
 func (u *ui) poweroffHost() {
@@ -189,7 +211,8 @@ func intervalAdjust(dst *int, changed func()) func(int) {
 func (u *ui) settingsMenu() []menuItem {
 	st := u.settings
 	changed := func() { u.settingsChanged = true }
-	items := u.settingsBackgroundItems(st, changed)
+	items := []menuItem{menuHeading("Home screen"), u.arrangeItem(), u.tileOrderItem()}
+	items = append(items, u.settingsBackgroundItems(st, changed)...)
 	items = append(items, u.settingsRSSItems(st, changed)...)
 	items = append(items, u.settingsDisplayItems(st, changed)...)
 	items = append(items, u.settingsWebItems(st, changed)...)
@@ -211,6 +234,10 @@ func (u *ui) settingsBackgroundItems(st *settings.Settings, changed func()) []me
 		{
 			title: "Image attribution",
 			radio: boolRadio("Shown", "Hidden", func() bool { return !st.HideAttribution }, func(v bool) { st.HideAttribution = !v; changed() }),
+		},
+		{
+			title: "Image title",
+			radio: boolRadio("Shown", "Hidden", func() bool { return st.ShowImageTitle }, func(v bool) { st.ShowImageTitle = v; changed() }),
 		},
 	}
 }
@@ -234,11 +261,41 @@ func (u *ui) settingsDisplayItems(st *settings.Settings, changed func()) []menuI
 			title: "Control help",
 			radio: boolRadio("Shown", "Hidden", func() bool { return !st.HideHelp }, func(v bool) { st.HideHelp = !v; changed() }),
 		},
+		{
+			title: "Menu sounds",
+			radio: boolRadio("On", "Off", func() bool { return !st.MuteMenuSounds }, func(v bool) { st.MuteMenuSounds = !v; changed() }),
+		},
+		{
+			title:  "Interface size",
+			value:  st.InterfaceSizeLabel,
+			adjust: func(dir int) { st.StepInterfaceSize(dir); changed() },
+		},
+		{
+			title:  "Theme",
+			value:  st.ThemeLabel,
+			adjust: func(dir int) { st.StepTheme(dir); changed() },
+		},
+		colorChoiceItem("Focus border", &st.FocusBorder, u.focusBorder, changed),
+		colorChoiceItem("Focus background", &st.FocusFill, u.focusFill, changed),
+		colorChoiceItem("Accent text", &st.AccentText, u.accentText, changed),
+		u.screenOffItem(st, changed),
+	}
+}
+
+func colorChoiceItem(title string, dst *string, current func() rl.Color, changed func()) menuItem {
+	return menuItem{
+		title:  title,
+		value:  func() string { return settings.ColorChoiceLabel(*dst) },
+		swatch: current,
+		adjust: func(dir int) {
+			*dst = settings.StepColorChoice(*dst, dir)
+			changed()
+		},
 	}
 }
 
 func (u *ui) settingsWebItems(st *settings.Settings, changed func()) []menuItem {
-	return []menuItem{
+	return append([]menuItem{
 		menuHeading("Web control"),
 		{
 			title: "Web control",
@@ -246,7 +303,7 @@ func (u *ui) settingsWebItems(st *settings.Settings, changed func()) []menuItem 
 		},
 		u.qrPlaceItem(st, changed),
 		u.webAddressItem(),
-	}
+	}, u.webCodeItems()...)
 }
 
 func (u *ui) qrPlaceItem(st *settings.Settings, changed func()) menuItem {
@@ -285,17 +342,25 @@ func (u *ui) menuFor(sc screen) (string, []menuItem, screen) {
 	return "More", u.moreMenu(), screenHome
 }
 
+// listMenu is a list-menu screen's title, items and parent screen.
 func (u *ui) listMenu(sc screen) (string, []menuItem, screen, bool) {
-	if sc == screenSettings {
-		return "Settings", u.settingsMenu(), screenMore, true
-	}
-	if sc == screenIntegrations {
-		return "Integrations", u.integrationsMenu(), screenMore, true
-	}
-	if sc == screenSystem {
-		return "System", u.systemMenu(), screenMore, true
+	if menu, ok := u.listMenuScreens()[sc]; ok {
+		title, items, parent := menu()
+		return title, items, parent, true
 	}
 	return u.promptMenu(sc)
+}
+
+type listMenuFunc func() (string, []menuItem, screen)
+
+func (u *ui) listMenuScreens() map[screen]listMenuFunc {
+	return map[screen]listMenuFunc{
+		screenSettings:        func() (string, []menuItem, screen) { return "Settings", u.settingsMenu(), screenMore },
+		screenIntegrations:    func() (string, []menuItem, screen) { return "Integrations", u.integrationsMenu(), screenMore },
+		screenSystem:          func() (string, []menuItem, screen) { return "System", u.systemMenu(), screenMore },
+		screenArrange:         func() (string, []menuItem, screen) { return "Arrange tiles", u.arrangeMenu(), screenSettings },
+		screenDiagnosticsMenu: func() (string, []menuItem, screen) { return "Diagnostics", u.diagnosticsMenu(), screenMore },
+	}
 }
 
 func (u *ui) promptMenu(sc screen) (string, []menuItem, screen, bool) {
@@ -304,6 +369,9 @@ func (u *ui) promptMenu(sc screen) (string, []menuItem, screen, bool) {
 	}
 	if sc == screenRunning {
 		return u.runningTitle, u.runningMenu(), screenHome, true
+	}
+	if sc == screenSleep {
+		return u.sleepTitle(time.Now()), u.sleepMenu(), screenHome, true
 	}
 	return "", nil, 0, false
 }
@@ -342,12 +410,15 @@ var gamepadButtonNames = map[int32]string{
 
 // handleMenu processes an action on a non-home screen.
 var listMenus = map[screen]bool{
-	screenMore:         true,
-	screenSettings:     true,
-	screenIntegrations: true,
-	screenSystem:       true,
-	screenConfirm:      true,
-	screenRunning:      true,
+	screenMore:            true,
+	screenSettings:        true,
+	screenIntegrations:    true,
+	screenSystem:          true,
+	screenDiagnosticsMenu: true,
+	screenArrange:         true,
+	screenSleep:           true,
+	screenConfirm:         true,
+	screenRunning:         true,
 }
 
 func (u *ui) handleMenu(a action) {
@@ -368,18 +439,33 @@ func (u *ui) handleMenu(a action) {
 	u.leaveInfoScreen(a)
 }
 
+// leaveInfoScreen returns to the Diagnostics menu with the screen just
+// left still selected.
 func (u *ui) leaveInfoScreen(a action) {
 	switch a {
 	case actionBack, actionExit, actionActivate:
-		u.screen = screenMore
+		from := u.screen
+		u.openMenu(screenDiagnosticsMenu)
+		for i, item := range u.diagnosticsMenu() {
+			if item.target == from {
+				u.menuSel = i
+			}
+		}
 	}
 }
 
 func (u *ui) handleListMenu(a action) {
 	_, items, parent := u.menuFor(u.screen)
 	u.menuSel = clampSelectable(items, u.menuSel)
+	if u.screen == screenArrange && u.handleArrange(a, items) {
+		return
+	}
 	switch a {
 	case actionBack, actionExit:
+		if u.screen == screenSleep {
+			u.cancelSleep()
+			return
+		}
 		u.leaveMenu(parent)
 	default:
 		u.applyListNav(a, items)
@@ -494,7 +580,7 @@ func (u *ui) drawInfoScreen(w, h, s, margin float32) {
 		return
 	}
 	if u.screen == screenDiagnostics {
-		u.drawDiagRows("Diagnostics", u.diagnostics(), w, h, s, margin)
+		u.drawDiagRows("App diagnostics", u.diagnostics(), w, h, s, margin)
 		return
 	}
 	if u.screen == screenAudio {
@@ -553,7 +639,10 @@ func menuAlignRow(rowTop, rowBot, top, bottom float32) float32 {
 }
 
 func (u *ui) drawMenuRows(items []menuItem, x, y, itemW, top, bottom, s float32) {
-	rl.BeginScissorMode(int32(x-8*s), int32(top), int32(itemW+16*s), int32(bottom-top))
+	// The selection border is drawn outside the row, so pad the clip on
+	// every side to keep it whole on the first and last rows.
+	pad := 8 * s
+	rl.BeginScissorMode(int32(x-pad), int32(top-pad), int32(itemW+2*pad), int32(bottom-top+2*pad))
 	for i, item := range items {
 		ih := menuRowHeight(item, s)
 		u.drawMenuRow(item, i == u.menuSel, x, y, itemW, ih, s)
@@ -572,20 +661,20 @@ func (u *ui) drawMenuRow(item menuItem, selected bool, x, y, itemW, itemH, s flo
 
 func (u *ui) drawMenuHeading(title string, x, y, itemH, s float32) {
 	size := 28 * s
-	u.text(title, x+4*s, y+(itemH-size)/2, size, rl.ColorAlpha(u.accent, 0.95))
+	u.text(title, x+4*s, y+(itemH-size)/2, size, rl.ColorAlpha(u.accentText(), 0.95))
 }
 
-func menuItemColors(accent rl.Color, selected, disabled bool) (fill, textColor rl.Color) {
-	fill, textColor = selectedMenuColors(accent, selected)
+func menuItemColors(focus rl.Color, selected, disabled bool) (fill, textColor rl.Color) {
+	fill, textColor = selectedMenuColors(focus, selected)
 	if disabled {
 		textColor = rl.ColorAlpha(textColor, 0.5)
 	}
 	return fill, textColor
 }
 
-func selectedMenuColors(accent rl.Color, selected bool) (fill, textColor rl.Color) {
+func selectedMenuColors(focus rl.Color, selected bool) (fill, textColor rl.Color) {
 	if selected {
-		return rl.ColorAlpha(accent, 0.22), rl.RayWhite
+		return rl.ColorAlpha(focus, 0.22), rl.RayWhite
 	}
 	return rl.ColorAlpha(rl.Black, 0.3), rl.ColorAlpha(rl.RayWhite, 0.7)
 }
@@ -599,10 +688,10 @@ func menuValueColor(accent rl.Color, selected bool) rl.Color {
 
 func (u *ui) drawMenuItem(item menuItem, selected bool, x, y, itemW, itemH, s float32) {
 	r := rl.Rectangle{X: x, Y: y, Width: itemW, Height: itemH}
-	fill, textColor := menuItemColors(u.accent, selected, item.disabled)
+	fill, textColor := menuItemColors(u.focusFill(), selected, item.disabled)
 	rl.DrawRectangleRounded(r, 0.25, 10, u.fa(fill))
 	if selected {
-		rl.DrawRectangleRoundedLinesEx(r, 0.25, 10, 4*s, u.fa(u.accent))
+		rl.DrawRectangleRoundedLinesEx(r, 0.25, 10, 4*s, u.fa(u.focusBorder()))
 	}
 	u.surface = &surfaceTint{contrast.RGBOf(fill), float64(fill.A) / 255}
 	u.text(item.title, r.X+36*s, r.Y+(itemH-40*s)/2, 40*s, textColor)
@@ -629,22 +718,37 @@ func (u *ui) drawMenuStepped(item menuItem, selected bool, r rl.Rectangle, itemH
 		}
 	}
 	m := u.measure(v, 36*s)
-	u.text(v, r.X+r.Width-36*s-m.X, r.Y+(itemH-36*s)/2, 36*s, menuValueColor(u.accent, selected && !item.disabled))
+	x := r.X + r.Width - 36*s - m.X
+	u.text(v, x, r.Y+(itemH-36*s)/2, 36*s, menuValueColor(u.accentText(), selected && !item.disabled))
+	if item.swatch != nil {
+		u.drawSwatch(item.swatch(), x-56*s, r.Y+(itemH-36*s)/2, 36*s, s)
+	}
+}
+
+func (u *ui) drawSwatch(c rl.Color, x, y, size, s float32) {
+	sw := rl.Rectangle{X: x, Y: y, Width: size, Height: size}
+	rl.DrawRectangleRounded(sw, 0.3, 8, u.fa(c))
+	rl.DrawRectangleRoundedLinesEx(sw, 0.3, 8, 2*s, u.fa(rl.ColorAlpha(rl.White, 0.35)))
 }
 
 func (u *ui) drawGamepads(w, s, margin float32) {
-	u.text("Gamepad info", margin, 190*s, 52*s, rl.ColorAlpha(rl.RayWhite, 0.85))
-	y := 280 * s
+	u.text("Input devices diagnostics", margin, 190*s, 52*s, rl.ColorAlpha(rl.RayWhite, 0.85))
+	y := u.drawKeysCard(margin, 280*s, w, s)
 	pads := u.gamepadReadings()
 	for _, p := range pads {
 		y = u.drawGamepadCard(p, margin, y, w, s)
 	}
 	if len(pads) == 0 {
 		u.text("No gamepads detected", margin, y, 40*s, rl.ColorAlpha(rl.RayWhite, 0.65))
+		y += 64 * s
+	}
+	for _, b := range u.unmatchedBatteries(pads) {
+		u.text(b.Name+": "+batteryLabel(b), margin, y, 28*s, rl.ColorAlpha(rl.RayWhite, 0.65))
+		y += 44 * s
 	}
 }
 
-// gamepadReading is what the Gamepad info screen shows for one pad.
+// gamepadReading is what the Input devices diagnostics screen shows for one pad.
 type gamepadReading struct {
 	name string
 	held []string
@@ -727,8 +831,16 @@ func (u *ui) drawGamepadCard(p gamepadReading, margin, y, w, s float32) float32 
 	r := rl.Rectangle{X: margin, Y: y, Width: w - 2*margin, Height: cardH}
 	rl.DrawRectangleRounded(r, 0.12, 10, u.fa(rl.ColorAlpha(rl.White, 0.06)))
 	u.text(fmt.Sprintf("%d   %s", p.index, p.label()), r.X+32*s, r.Y+24*s, 40*s, rl.RayWhite)
+	if b, ok := u.batteryFor(p.name); ok {
+		label := batteryLabel(b)
+		c := rl.ColorAlpha(rl.RayWhite, 0.65)
+		if batteryIsLow(b) {
+			c = colorBad
+		}
+		u.text(label, r.X+r.Width-32*s-u.measure(label, 28*s).X, r.Y+32*s, 28*s, c)
+	}
 	u.text(u.fitText(p.axesLine(), 28*s, r.Width-64*s), r.X+32*s, r.Y+84*s, 28*s, rl.ColorAlpha(rl.RayWhite, 0.65))
-	u.text(p.heldText(), r.X+32*s, r.Y+130*s, 28*s, u.accent)
+	u.text(p.heldText(), r.X+32*s, r.Y+130*s, 28*s, u.accentText())
 	return y + cardH + 24*s
 }
 

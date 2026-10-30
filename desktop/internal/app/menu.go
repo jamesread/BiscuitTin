@@ -25,6 +25,7 @@ const (
 	screenSystem
 	screenConfirm
 	screenRunning
+	screenAudio
 )
 
 // menuItem is one row of a list menu. It is a link (target, or open for
@@ -59,6 +60,7 @@ func (u *ui) moreMenu() []menuItem {
 		},
 		{title: "Settings", open: func() { u.openMenu(screenSettings) }},
 		{title: "Gamepad info", target: screenGamepads},
+		{title: "Audio diagnostics", target: screenAudio},
 		{title: "Diagnostics", target: screenDiagnostics},
 		{title: "System", open: func() { u.openMenu(screenSystem) }},
 		{title: "Back", target: screenHome},
@@ -357,6 +359,10 @@ func (u *ui) handleMenu(a action) {
 		u.handleActionList(a)
 		return
 	}
+	if u.screen == screenAudio {
+		u.handleAudio(a)
+		return
+	}
 	// On gamepads, B is a button worth inspecting, so only keyboard/remote
 	// Back and the A button leave. Diagnostics uses the same keys.
 	u.leaveInfoScreen(a)
@@ -488,7 +494,11 @@ func (u *ui) drawInfoScreen(w, h, s, margin float32) {
 		return
 	}
 	if u.screen == screenDiagnostics {
-		u.drawDiagnostics(w, h, s, margin)
+		u.drawDiagRows("Diagnostics", u.diagnostics(), w, h, s, margin)
+		return
+	}
+	if u.screen == screenAudio {
+		u.drawDiagRows("Audio diagnostics", u.audioDiagnostics(), w, h, s, margin)
 		return
 	}
 	u.drawActionList(w, h, s, margin)
@@ -636,12 +646,12 @@ func (u *ui) drawGamepads(w, s, margin float32) {
 
 // gamepadReading is what the Gamepad info screen shows for one pad.
 type gamepadReading struct {
-	index int32
-	name  string
-	axes  int32
+	name string
+	held []string
 	// left x/y, right x/y, left trigger, right trigger
 	sticks [6]float32
-	held   []string
+	index  int32
+	axes   int32
 }
 
 // gamepadReadings returns the connected pads, or the scripted ones when a

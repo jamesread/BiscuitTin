@@ -68,7 +68,7 @@ func TestLoadRecentReturnsNewestAndPrunes(t *testing.T) {
 	for i := range 7 {
 		p := filepath.Join(dir, fmt.Sprintf("%d.png", i))
 		writeTestPNG(t, p)
-		if err := os.WriteFile(p+".credit", []byte(fmt.Sprintf("pic-%d\n", i)), 0o644); err != nil {
+		if err := os.WriteFile(p+".credit", fmt.Appendf(nil, "pic-%d\n", i), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		if err := os.Chtimes(p, time.Unix(int64(i), 0), time.Unix(int64(i), 0)); err != nil {

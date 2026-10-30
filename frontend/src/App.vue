@@ -51,6 +51,7 @@ const screenLabel = computed(() => ({
 	actions: 'Pinning actions',
 	gamepads: 'Gamepad info',
 	diagnostics: 'Diagnostics',
+	audio: 'Audio diagnostics',
 }[state.screen] || state.screen))
 
 async function refresh() {

@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"math"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -73,6 +74,7 @@ type ui struct {
 	webURL          string
 	listenAddr      string
 	scriptPads      []gamepadReading
+	padNames        padNames
 	rssPrev         rss.Item
 	rssCur          rss.Item
 	font            rl.Font
@@ -374,10 +376,49 @@ func (u *ui) drawHeader(w, s, margin float32) {
 	clockSize := 56 * s
 	titleSize := 72 * s
 	cw := u.measure(clock, clockSize)
-	title := u.fitText(u.cfg.Title, titleSize, w-2*margin-cw.X-40*s)
+	clockX := w - margin - cw.X
+	padsW := u.drawPadIndicator(clockX-32*s, 68*s, clockSize, s)
+	title := u.fitText(u.cfg.Title, titleSize, w-2*margin-cw.X-padsW-40*s)
 	u.text(title, margin, 60*s, titleSize, rl.RayWhite)
-	u.text(clock, w-margin-cw.X, 68*s, clockSize, rl.ColorAlpha(rl.RayWhite, 0.7))
+	u.text(clock, clockX, 68*s, clockSize, rl.ColorAlpha(rl.RayWhite, 0.7))
 	u.drawAlpha = u.bodyAlpha
+}
+
+// padCountLabel is the number drawn before the gamepad icon: blank for one
+// pad, as the icon alone says that.
+func padCountLabel(n int) string {
+	if n > 1 {
+		return strconv.Itoa(n)
+	}
+	return ""
+}
+
+// padIndicatorGlyph is the header's gamepad icon, a controller outline.
+const padIndicatorGlyph = "device-gamepad-2"
+
+// drawPadIndicator draws a gamepad icon, with the count before it when more
+// than one is connected, right-aligned to right on the home screen. It
+// returns the width used plus a gap, or 0 when nothing is drawn.
+func (u *ui) drawPadIndicator(right, y, size, s float32) float32 {
+	if u.screen != screenHome {
+		return 0
+	}
+	n := u.gamepadCount()
+	t := u.glyphs[padIndicatorGlyph]
+	if n == 0 || t.ID == 0 {
+		return 0
+	}
+	c := rl.ColorAlpha(rl.RayWhite, 0.7)
+	x := right - size
+	rl.DrawTexturePro(t,
+		rl.Rectangle{Width: float32(t.Width), Height: float32(t.Height)},
+		rl.Rectangle{X: x, Y: y, Width: size, Height: size},
+		rl.Vector2{}, 0, u.fa(c))
+	if label := padCountLabel(n); label != "" {
+		x -= u.measure(label, size).X + 10*s
+		u.text(label, x, y, size, c)
+	}
+	return right - x + 32*s
 }
 
 func (u *ui) drawBody(w, h, s, margin, dt float32) {

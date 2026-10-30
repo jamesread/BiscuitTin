@@ -68,6 +68,7 @@ var screenHints = map[screen]func() []hint{
 	screenActionList:  actionListHints,
 	screenGamepads:    gamepadHints,
 	screenDiagnostics: diagnosticsHints,
+	screenAudio:       audioHints,
 	screenConfirm:     confirmHints,
 	screenRunning:     confirmHints,
 }

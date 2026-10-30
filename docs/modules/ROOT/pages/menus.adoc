@@ -11,6 +11,7 @@ image::screenshots/more.png[More menu]
 | Integrations | Lists from xref:integrations.adoc[OliveTin and Home Assistant], to pin as tiles. Unconfigured sources stay in the list as *Needs YAML config*.
 | Settings | The settings below.
 | Gamepad info | Each connected gamepad's name, axes and held buttons, live.
+| Audio diagnostics | Whether the audio device opened, the sound server found, the runtime dir (flagged when another user owns it, which silences sound), volume and menu sounds. A or kbd:[Enter] plays a test sound.
 | Diagnostics | Version, display, primary input, paths and integration addresses.
 | System | Exit BiscuitTin, or reboot or power off the machine.
 |===

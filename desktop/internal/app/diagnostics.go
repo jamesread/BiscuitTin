@@ -161,10 +161,10 @@ func orNone(s string) string {
 	return s
 }
 
-func (u *ui) drawDiagnostics(w, h, s, margin float32) {
-	u.text("Diagnostics", margin, 190*s, 52*s, rl.ColorAlpha(rl.RayWhite, 0.85))
+// drawDiagRows draws a titled panel of key/value rows, shrinking rows to fit.
+func (u *ui) drawDiagRows(title string, rows []diagRow, w, h, s, margin float32) {
+	u.text(title, margin, 190*s, 52*s, rl.ColorAlpha(rl.RayWhite, 0.85))
 
-	rows := u.diagnostics()
 	rowH := 46 * s
 	size := 30 * s
 	top := 270 * s

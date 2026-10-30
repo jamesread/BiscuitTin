@@ -20,6 +20,7 @@ var screenNames = map[screen]string{
 	screenActionList:   "actions",
 	screenGamepads:     "gamepads",
 	screenDiagnostics:  "diagnostics",
+	screenAudio:        "audio",
 	screenSystem:       "system",
 	screenConfirm:      "confirm",
 	screenRunning:      "running",

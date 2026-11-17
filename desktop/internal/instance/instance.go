@@ -48,22 +48,37 @@ func Acquire(path string) (*Lock, int, error) {
 		return nil, 0, err
 	}
 	for range 2 {
-		err := create(path)
-		if err == nil {
-			return &Lock{path: path}, 0, nil
-		}
+		lock, pid, err := tryAcquire(path)
 		if !errors.Is(err, os.ErrExist) {
-			return nil, 0, err
+			return lock, pid, err
 		}
-		if pid, ok := holder(path); ok {
-			return nil, pid, ErrRunning
-		}
-		lg().Info("removed stale pid file", zap.String("path", path))
-		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return nil, 0, err
+		if remErr := removeStale(path); remErr != nil {
+			return nil, 0, remErr
 		}
 	}
 	return nil, 0, fmt.Errorf("could not create %s", path)
+}
+
+func tryAcquire(path string) (*Lock, int, error) {
+	err := create(path)
+	if err == nil {
+		return &Lock{path: path}, 0, nil
+	}
+	if !errors.Is(err, os.ErrExist) {
+		return nil, 0, err
+	}
+	if pid, ok := holder(path); ok {
+		return nil, pid, ErrRunning
+	}
+	return nil, 0, os.ErrExist
+}
+
+func removeStale(path string) error {
+	lg().Info("removed stale pid file", zap.String("path", path))
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
 }
 
 // create makes the pid file only if it does not exist, so two instances
@@ -81,18 +96,26 @@ func create(path string) error {
 // holder returns the pid in path if that process is alive and is a
 // BiscuitTin, judged by its executable name matching ours.
 func holder(path string) (int, bool) {
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return 0, false
-	}
-	pid, err := strconv.Atoi(strings.TrimSpace(string(raw)))
-	if err != nil || pid <= 0 || pid == os.Getpid() {
+	pid, ok := parseHolderPID(path)
+	if !ok || pid == os.Getpid() {
 		return 0, false
 	}
 	if syscall.Kill(pid, 0) != nil {
 		return 0, false
 	}
 	return pid, sameProgram(pid)
+}
+
+func parseHolderPID(path string) (int, bool) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return 0, false
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(raw)))
+	if err != nil || pid <= 0 {
+		return 0, false
+	}
+	return pid, true
 }
 
 func sameProgram(pid int) bool {

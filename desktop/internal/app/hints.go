@@ -145,19 +145,28 @@ func (u *ui) hintRow(hn hint, usePad bool, layout padLayout, size, glyph, s floa
 }
 
 func (u *ui) hintPadRow(hn hint, layout padLayout, size, glyph, s float32) []hintPiece {
+	row := u.hintPadGlyphs(hn, layout, glyph)
+	for _, k := range hn.padKeys {
+		row = append(row, u.keycap(padKeyLabel(k, layout), size, s))
+	}
+	return row
+}
+
+func (u *ui) hintPadGlyphs(hn hint, layout padLayout, glyph float32) []hintPiece {
 	var row []hintPiece
 	for _, r := range hn.pad {
 		if name := glyphFile(r, layout); u.glyphs[name].ID != 0 {
 			row = append(row, hintPiece{glyph: name, w: glyph})
 		}
 	}
-	for _, k := range hn.padKeys {
-		if ps, ok := psButtonNames[k]; ok && layout == layoutPlayStation {
-			k = ps
-		}
-		row = append(row, u.keycap(k, size, s))
-	}
 	return row
+}
+
+func padKeyLabel(k string, layout padLayout) string {
+	if ps, ok := psButtonNames[k]; ok && layout == layoutPlayStation {
+		return ps
+	}
+	return k
 }
 
 func (u *ui) keycap(k string, size, s float32) hintPiece {

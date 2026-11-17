@@ -132,6 +132,10 @@ func (s *session) checkSleep(now time.Time) {
 		return
 	}
 	t.prompted = true
+	s.promptSleep()
+}
+
+func (s *session) promptSleep() {
 	if s.screenOff {
 		s.wakeScreen()
 	}

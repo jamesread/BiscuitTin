@@ -4,17 +4,19 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite",
-		"build": "vite build"
+		"build": "vite build",
+		"lint": "eslint src"
 	},
 	"dependencies": {
-		"@bufbuild/protobuf": "^2.16.0",
-		"@connectrpc/connect": "^2.2.0",
-		"@connectrpc/connect-web": "^2.2.0",
-		"picocrank": "^1.37.0",
-		"vue": "^3.5.44"
+		"@bufbuild/protobuf": "^2.17.0",
+		"@connectrpc/connect": "^2.3.0",
+		"@connectrpc/connect-web": "^2.3.0",
+		"picocrank": "^1.41.0",
+		"vue": "^3.5.45"
 	},
 	"devDependencies": {
-		"@vitejs/plugin-vue": "^6.0.10",
-		"vite": "^8.3.5"
+		"@vitejs/plugin-vue": "^6.0.11",
+		"eslint": "^10.15.0",
+		"vite": "^8.3.8"
 	}
 }

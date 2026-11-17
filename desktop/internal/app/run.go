@@ -68,39 +68,39 @@ func Run(cfg *config.Config, opts Options) error {
 }
 
 type session struct {
-	cfg              *config.Config
-	settings         *settings.Settings
+	debugSrv         *debugctl.Server
+	started          map[int]time.Time
 	u                *ui
 	in               *input
 	sc               *script
 	bg               *backgrounds.Fetcher
 	iconResults      chan icons.Result
 	actionLists      chan actionListResult
-	actionEvents     chan integrations.Event
+	screenSaver      *x11win.ScreenSaver
 	volumeResults    chan volumeResult
 	installedResults chan installedResult
-	installedGen     int
+	cfg              *config.Config
 	iconRequested    map[string]bool
 	bridge           *webcontrol.Bridge
-	web              *webcontrol.Server
-	debugBridge      *debugctl.Bridge
-	debugSrv         *debugctl.Server
+	settings         *settings.Settings
 	tray             *tray.Host
+	actionEvents     chan integrations.Event
+	debugBridge      *debugctl.Bridge
 	raise            chan os.Signal
 	stopSignals      chan os.Signal
 	cec              *cec.Reader
 	exits            chan launch.Exit
-	started          map[int]time.Time
+	web              *webcontrol.Server
 	stopping         map[int]stopTimer
+	batteryResults   chan []padbattery.Battery
 	awake            keepAwake
 	batteries        batteryWatch
-	batteryResults   chan []padbattery.Battery
+	configStamp      configStamp
 	keptToast        string
-	screenSaver      *x11win.ScreenSaver
 	scriptPath       string
 	configPath       string
 	webURL           string
-	configStamp      configStamp
+	installedGen     int
 	configCheckAt    float64
 	bgNext           float64
 	bgShownAt        float64
@@ -277,25 +277,33 @@ func openWindow(cfg *config.Config, size image.Point, fullscreen bool) {
 }
 
 func (s *session) close() {
+	s.stopServers()
+	s.tray.Stop()
+	if s.screenSaver != nil {
+		s.screenSaver.Close()
+	}
+	s.stopSignalChans()
+	s.stopCEC()
+	s.u.unload()
+	rl.CloseAudioDevice()
+	rl.CloseWindow()
+}
+
+func (s *session) stopServers() {
 	if s.web != nil {
 		s.web.Stop()
 	}
 	if s.debugSrv != nil {
 		s.debugSrv.Stop()
 	}
-	s.tray.Stop()
-	if s.screenSaver != nil {
-		s.screenSaver.Close()
-	}
+}
+
+func (s *session) stopSignalChans() {
 	for _, ch := range []chan os.Signal{s.raise, s.stopSignals} {
 		if ch != nil {
 			signal.Stop(ch)
 		}
 	}
-	s.stopCEC()
-	s.u.unload()
-	rl.CloseAudioDevice()
-	rl.CloseWindow()
 }
 
 func (s *session) goIcon(f func()) {
@@ -647,16 +655,10 @@ func (s *session) handleVisibleFrame() (done bool, err error) {
 		s.awake.padUsed(time.Now())
 	}
 	a, done, err = s.maybeScript(a)
-	if done {
+	if done || a == actionQuit {
 		return true, err
 	}
-	if a == actionQuit {
-		return true, nil
-	}
-	if isVolume(a) {
-		s.changeVolume(a)
-		a = actionNone
-	}
+	a = s.consumeVolume(a)
 	a = s.applyScreenOff(a)
 	if s.screenOff {
 		drawScreenOff()
@@ -665,6 +667,14 @@ func (s *session) handleVisibleFrame() (done bool, err error) {
 	a = s.applyIdle(a, remoteTap)
 	syncCursor(s.u.idle)
 	return s.drawAfterAction(a), nil
+}
+
+func (s *session) consumeVolume(a action) action {
+	if !isVolume(a) {
+		return a
+	}
+	s.changeVolume(a)
+	return actionNone
 }
 
 func syncCursor(idle bool) {

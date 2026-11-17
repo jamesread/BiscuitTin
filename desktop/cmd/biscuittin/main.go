@@ -93,7 +93,10 @@ func run(logger *zap.Logger, configPath string, windowed bool, sizeFlag, scriptP
 		}
 		defer lock.Release()
 	}
+	return runApp(logger, configPath, windowed, sizeFlag, scriptPath)
+}
 
+func runApp(logger *zap.Logger, configPath string, windowed bool, sizeFlag, scriptPath string) int {
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		logger.Error("config", zap.Error(err))
@@ -104,14 +107,12 @@ func run(logger *zap.Logger, configPath string, windowed bool, sizeFlag, scriptP
 		logger.Error("bad -size", zap.Error(err))
 		return 2
 	}
-
-	err = app.Run(cfg, app.Options{
+	if err := app.Run(cfg, app.Options{
 		ConfigPath: configPath,
 		Windowed:   windowed,
 		Size:       size,
 		ScriptPath: scriptPath,
-	})
-	if err != nil {
+	}); err != nil {
 		logger.Error("biscuittin stopped", zap.Error(err))
 		return 1
 	}
@@ -126,8 +127,8 @@ func acquireInstance(logger *zap.Logger) (*instance.Lock, bool) {
 	lock, pid, err := instance.Acquire(path)
 	if errors.Is(err, instance.ErrRunning) {
 		logger.Info("already running, bringing it to the foreground", zap.Int("pid", pid), zap.String("pidFile", path))
-		if err := instance.Raise(pid); err != nil {
-			logger.Warn("could not signal the running instance", zap.Int("pid", pid), zap.Error(err))
+		if raiseErr := instance.Raise(pid); raiseErr != nil {
+			logger.Warn("could not signal the running instance", zap.Int("pid", pid), zap.Error(raiseErr))
 		}
 		return nil, false
 	}

@@ -25,10 +25,11 @@ func startScreenCommand(argv []string) {
 
 // applyScreenOff blanks the screen once nothing has been pressed for the
 // Screen off after setting, and wakes it on the next press, which does
-// nothing else.
+// nothing else. Any gamepad button, stick or key wakes it, not only those
+// mapped to actions.
 func (s *session) applyScreenOff(a action) action {
 	if s.screenOff {
-		if a == actionNone {
+		if a == actionNone && !s.in.active {
 			return a
 		}
 		s.wakeScreen()

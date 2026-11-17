@@ -59,15 +59,23 @@ func (w *batteryWatch) warnings(bs []padbattery.Battery) []string {
 	}
 	var out []string
 	for _, b := range bs {
-		switch {
-		case b.Charging() || b.Capacity > batteryReArm:
-			delete(w.warned, b.Supply)
-		case batteryIsLow(b) && !w.warned[b.Supply]:
-			w.warned[b.Supply] = true
-			out = append(out, b.Name+" battery low"+percentSuffix(b))
+		if msg := w.warnBattery(b); msg != "" {
+			out = append(out, msg)
 		}
 	}
 	return out
+}
+
+func (w *batteryWatch) warnBattery(b padbattery.Battery) string {
+	if b.Charging() || b.Capacity > batteryReArm {
+		delete(w.warned, b.Supply)
+		return ""
+	}
+	if !batteryIsLow(b) || w.warned[b.Supply] {
+		return ""
+	}
+	w.warned[b.Supply] = true
+	return b.Name + " battery low" + percentSuffix(b)
 }
 
 func batteryIsLow(b padbattery.Battery) bool {
@@ -116,17 +124,20 @@ func (u *ui) batteryFor(padName string) (padbattery.Battery, bool) {
 func (u *ui) unmatchedBatteries(pads []gamepadReading) []padbattery.Battery {
 	var out []padbattery.Battery
 	for _, b := range u.batteries {
-		matched := false
-		for _, p := range pads {
-			if mb, ok := u.batteryFor(p.name); ok && mb.Supply == b.Supply {
-				matched = true
-			}
-		}
-		if !matched {
+		if !u.batteryMatchesPad(b, pads) {
 			out = append(out, b)
 		}
 	}
 	return out
+}
+
+func (u *ui) batteryMatchesPad(b padbattery.Battery, pads []gamepadReading) bool {
+	for _, p := range pads {
+		if mb, ok := u.batteryFor(p.name); ok && mb.Supply == b.Supply {
+			return true
+		}
+	}
+	return false
 }
 
 // toastOrKeep shows a message now, or keeps it for when the launcher comes

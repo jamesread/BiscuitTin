@@ -68,7 +68,7 @@ func soundForAction(a action, s uiSounds) rl.Sound {
 }
 
 func (u *ui) playAction(a action) {
-	if u.menuSoundsMuted() && !(u.screen == screenAudio && a == actionActivate) {
+	if u.menuSoundsMuted() && (u.screen != screenAudio || a != actionActivate) {
 		return
 	}
 	u.playSound(soundForAction(a, u.sounds))

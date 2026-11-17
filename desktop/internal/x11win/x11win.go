@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -19,9 +20,9 @@ var ErrNotFound = errors.New("no window found")
 
 // Window is a top-level client window as the window manager lists it.
 type Window struct {
+	Class string
+	PID   int
 	ID    xproto.Window
-	PID   int    // _NET_WM_PID, 0 if unset
-	Class string // WM_CLASS, instance and class joined by a space
 }
 
 // Switch activates the newest window whose process is in one of sessions
@@ -52,17 +53,28 @@ func Match(wins []Window, sessions []int, class string, sessionOf func(pid int) 
 	for _, s := range sessions {
 		want[s] = true
 	}
-	for i := len(wins) - 1; i >= 0; i-- {
-		if sid, ok := sessionOf(wins[i].PID); ok && want[sid] {
-			return wins[i].ID, true
-		}
+	if id, ok := newestSessionWindow(wins, want, sessionOf); ok {
+		return id, true
 	}
 	if class == "" {
 		return 0, false
 	}
-	for i := len(wins) - 1; i >= 0; i-- {
-		if classMatches(wins[i].Class, class) {
-			return wins[i].ID, true
+	return newestClassWindow(wins, class)
+}
+
+func newestSessionWindow(wins []Window, want map[int]bool, sessionOf func(pid int) (int, bool)) (xproto.Window, bool) {
+	for _, w := range slices.Backward(wins) {
+		if sid, ok := sessionOf(w.PID); ok && want[sid] {
+			return w.ID, true
+		}
+	}
+	return 0, false
+}
+
+func newestClassWindow(wins []Window, class string) (xproto.Window, bool) {
+	for _, w := range slices.Backward(wins) {
+		if classMatches(w.Class, class) {
+			return w.ID, true
 		}
 	}
 	return 0, false

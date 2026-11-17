@@ -44,70 +44,70 @@ type tile struct {
 func entryKey(i int) string { return fmt.Sprintf("entry:%d", i) }
 
 type ui struct {
+	font            rl.Font
+	startedAt       time.Time
 	captureErr      error
-	scales          map[string]float32
-	rssSeen         map[string]bool
-	icons           map[string]rl.Texture2D
-	input           *input
+	cfg             *config.Config
+	confirmDo       func()
 	surface         *surfaceTint
 	actionsRunning  map[string]int
 	rss             *rss.Fetcher
 	cec             *cec.Reader
 	lists           map[string]*uiActionList
-	cfg             *config.Config
+	icons           map[string]rl.Texture2D
 	settings        *settings.Settings
-	confirmDo       func()
+	input           *input
 	runningSwitch   func()
 	runningKill     func()
 	runningAgain    func()
 	qr              *qr.Code
 	glyphs          map[string]rl.Texture2D
-	sources         []integrations.Source
-	pids            [][]int
-	tiles           []tile
-	listSource      string
-	captureTo       string
-	toast           string
-	qrURL           string
+	missing         map[string]bool // tile keys whose command isn't installed
+	rssSeen         map[string]bool
+	scales          map[string]float32
+	rssCur          rss.Item
+	rssPrev         rss.Item
+	padNames        padNames
+	configPath      string
 	clock           string
 	confirmTitle    string
 	confirmLabel    string
 	runningTitle    string
 	debugSocket     string
-	configPath      string
+	listSource      string
 	webURL          string
 	listenAddr      string
-	scriptPads      []gamepadReading
-	padNames        padNames
-	rssPrev         rss.Item
-	rssCur          rss.Item
-	font            rl.Font
-	sounds          uiSounds
-	startedAt       time.Time
-	bgTex           uiBackground
-	wantSize        image.Point
-	confirmBack     screen
-	toastUntil      float64
-	missing         map[string]bool // tile keys whose command isn't installed
+	qrURL           string
+	toast           string
+	captureTo       string
 	sleep           sleepTimer
 	batteries       []padbattery.Battery
+	tiles           []tile
+	pids            [][]int
+	scriptPads      []gamepadReading
+	sources         []integrations.Source
+	sounds          uiSounds
+	bgTex           uiBackground
+	wantSize        image.Point
+	screen          screen
 	volumeUntil     float64
 	volumeLevel     int
-	volumeMuted     bool
-	volumeKnown     bool
+	toastUntil      float64
 	menuSel         int
 	rssShownAt      float64
 	selected        int
-	screen          screen
-	rssAnim         float32
+	confirmBack     screen
 	drawAlpha       float32
 	bodyAlpha       float32
+	rssAnim         float32
 	tileColor       color.RGBA
-	accent          color.RGBA
 	toastColor      color.RGBA
 	bg              color.RGBA
-	onTile          bool
+	accent          color.RGBA
 	idle            bool
+	volumeMuted     bool
+	onTile          bool
+	volumeKnown     bool
 	rssHavePrev     bool
 	rssHaveCur      bool
 	settingsChanged bool

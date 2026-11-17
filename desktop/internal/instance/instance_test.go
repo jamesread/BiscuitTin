@@ -1,6 +1,7 @@
 package instance
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/exec"
@@ -43,7 +44,7 @@ func TestAcquireReplacesStale(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			if name == "other" {
-				cmd := exec.Command("sleep", "30")
+				cmd := exec.CommandContext(t.Context(), "sleep", "30")
 				if err := cmd.Start(); err != nil {
 					t.Skip("no sleep:", err)
 				}
@@ -76,7 +77,7 @@ func TestHelperProcess(t *testing.T) {
 }
 
 func TestAcquireRefusesLiveInstance(t *testing.T) {
-	cmd := exec.Command(os.Args[0], "-test.run=^TestHelperProcess$")
+	cmd := exec.CommandContext(context.Background(), os.Args[0], "-test.run=^TestHelperProcess$")
 	cmd.Env = append(os.Environ(), "BISCUITTIN_INSTANCE_HELPER=1")
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)

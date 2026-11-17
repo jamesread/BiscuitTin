@@ -22,7 +22,10 @@ var Intervals = []int{60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43
 // separately from the hand-written config (which they override), so the
 // config file is never rewritten by the app.
 type Settings struct {
-	File string `yaml:"-"` // where the settings are saved
+	// LastUsed is when each tile (by tile ID) was last launched, in unix
+	// seconds. Used when RecentFirst is on.
+	LastUsed map[string]int64 `yaml:"lastUsed,omitempty"`
+	File     string           `yaml:"-"` // where the settings are saved
 	// FocusBorder and FocusFill colour the selected tile, menu row or
 	// action ("#rrggbb"). Empty follows the config's accent.
 	FocusBorder string `yaml:"focusBorder,omitempty"`
@@ -43,25 +46,24 @@ type Settings struct {
 	// pinned action's key); HiddenTiles are left off the home screen.
 	TileOrder   []string `yaml:"tileOrder,omitempty"`
 	HiddenTiles []string `yaml:"hiddenTiles,omitempty"`
-	// RecentFirst puts the most recently launched tiles first on the home
-	// screen; LastUsed is when each tile (by tile ID) was last launched, in
-	// unix seconds.
-	LastUsed    map[string]int64 `yaml:"lastUsed,omitempty"`
-	RecentFirst bool             `yaml:"recentFirst"`
+	// BackgroundInterval and RSSInterval are how long each background or
+	// headline stays on the idle screen.
+	BackgroundInterval int `yaml:"backgroundInterval"`
+	RSSInterval        int `yaml:"rssInterval"`
 	// QRPlace is none, menu (home tiles) or idle. Default none.
-	QRPlace            QRPlace `yaml:"qrPlace"`
-	BackgroundInterval int     `yaml:"backgroundInterval"`
+	QRPlace QRPlace `yaml:"qrPlace"`
 	// ScreenOffAfter blanks the screen after this many idle seconds; 0 is
 	// never (the default).
 	ScreenOffAfter int `yaml:"screenOffAfter"`
 	// InterfaceSize is a percentage of the normal size: 85, 100, 115 or
 	// 130. Unset is 100.
 	InterfaceSize int `yaml:"interfaceSize,omitempty"`
-	// RSSInterval is how long each headline stays on the idle screen.
-	RSSInterval        int  `yaml:"rssInterval"`
-	BackgroundsEnabled bool `yaml:"backgroundsEnabled"`
 	// RSSEnabled shows idle headlines when feeds are configured. Default on.
-	RSSEnabled bool `yaml:"rssEnabled"`
+	RSSEnabled         bool `yaml:"rssEnabled"`
+	BackgroundsEnabled bool `yaml:"backgroundsEnabled"`
+	// RecentFirst puts the most recently launched tiles first on the home
+	// screen.
+	RecentFirst bool `yaml:"recentFirst"`
 	// HideAttribution hides the background image credit, separately from
 	// the title; HideHelp hides the control hints in the footer.
 	HideAttribution bool `yaml:"hideAttribution"`

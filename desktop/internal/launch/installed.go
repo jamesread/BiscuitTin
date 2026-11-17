@@ -14,15 +14,26 @@ func ProbeArgs(cmd []string) []string {
 	if len(cmd) == 0 {
 		return nil
 	}
-	if cmd[0] == "flatpak" && len(cmd) > 1 && cmd[1] == "run" {
-		for _, a := range cmd[2:] {
-			if !strings.HasPrefix(a, "-") {
-				return []string{"flatpak", "info", a}
-			}
-		}
-		return nil
+	if args := flatpakProbe(cmd); args != nil || isFlatpakRun(cmd) {
+		return args
 	}
 	return []string{"sh", "-c", `command -v "$1" >/dev/null`, "sh", cmd[0]}
+}
+
+func isFlatpakRun(cmd []string) bool {
+	return len(cmd) > 1 && cmd[0] == "flatpak" && cmd[1] == "run"
+}
+
+func flatpakProbe(cmd []string) []string {
+	if !isFlatpakRun(cmd) {
+		return nil
+	}
+	for _, a := range cmd[2:] {
+		if !strings.HasPrefix(a, "-") {
+			return []string{"flatpak", "info", a}
+		}
+	}
+	return nil
 }
 
 // runProbe runs a probe command. Tests replace this.

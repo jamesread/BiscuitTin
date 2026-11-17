@@ -87,8 +87,8 @@ func (s *session) drainVolume() {
 func parseVolume(out string) (int, bool, bool) {
 	muted := strings.Contains(strings.ToUpper(out), "MUTED")
 	for f := range strings.FieldsSeq(out) {
-		if strings.HasSuffix(f, "%") {
-			if n, err := strconv.Atoi(strings.TrimSuffix(f, "%")); err == nil {
+		if pct, ok := strings.CutSuffix(f, "%"); ok {
+			if n, err := strconv.Atoi(pct); err == nil {
 				return n, muted, true
 			}
 			continue

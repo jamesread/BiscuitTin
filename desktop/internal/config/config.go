@@ -164,23 +164,19 @@ func ApplyDefaults(cfg *Config) {
 // applyCommandDefaults fills in unset commands. An empty list, as opposed
 // to a missing one, stays empty.
 func applyCommandDefaults(cfg *Config) {
-	if cfg.ScreenOff.OffCommand == nil {
-		cfg.ScreenOff.OffCommand = []string{"xset", "dpms", "force", "off"}
-	}
-	if cfg.ScreenOff.OnCommand == nil {
-		cfg.ScreenOff.OnCommand = []string{"xset", "dpms", "force", "on"}
-	}
-	if cfg.Volume.UpCommand == nil {
-		cfg.Volume.UpCommand = []string{"wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", "5%+"}
-	}
-	if cfg.Volume.DownCommand == nil {
-		cfg.Volume.DownCommand = []string{"wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-"}
-	}
-	if cfg.Volume.GetCommand == nil {
-		cfg.Volume.GetCommand = []string{"wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"}
-	}
+	setCmdIfNil(&cfg.ScreenOff.OffCommand, "xset", "dpms", "force", "off")
+	setCmdIfNil(&cfg.ScreenOff.OnCommand, "xset", "dpms", "force", "on")
+	setCmdIfNil(&cfg.Volume.UpCommand, "wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", "5%+")
+	setCmdIfNil(&cfg.Volume.DownCommand, "wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-")
+	setCmdIfNil(&cfg.Volume.GetCommand, "wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@")
 	if len(cfg.CEC.Command) == 0 {
 		cfg.CEC.Command = []string{"cec-client", "-d", "16", "-t", "p", "-o", "BiscuitTin"}
+	}
+}
+
+func setCmdIfNil(dst *[]string, cmd ...string) {
+	if *dst == nil {
+		*dst = cmd
 	}
 }
 
